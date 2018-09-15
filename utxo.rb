@@ -100,13 +100,16 @@ class Utxo
 	end	
 	
 	def plot(queue_size)
+		start_time = Time.now
 		# PP.pp(utxo, $>, 200)
 		num_outputs = 0
-		@utxo.each do |key, val|
+=begin		
+		@utxo.each_value do |val|
 			num_outputs += (val.size - 1) / 2
 		end
+=end		
 		t = Time.at(@time).to_datetime
-		puts "#{@height}: #{t}. #{@utxo.size} tx in utxo, #{num_outputs} outputs. Block hash: #{@hash}. queue size: #{queue_size}"
+		puts "#{@height}: #{t}. #{@utxo.size} tx in utxo, #{num_outputs} outputs. Block hash: #{@hash}. queue size: #{queue_size} #{Time.now-start_time}"
 	end
 	
 	def convert
@@ -131,7 +134,7 @@ if $0 == __FILE__
 	br = BlockReader.new('http://127.0.0.1:8332')
 	filename = "utxo.bin"
 	interval_save_seconds = 10*60
-	interval_status_seconds = 2
+	interval_status_seconds = 10
 	deadline_status = Time.now + interval_status_seconds
 	deadline_save = Time.now + interval_save_seconds
 
@@ -156,7 +159,7 @@ if $0 == __FILE__
 			found_idx = block_data.rindex(str)
 			if found_idx.nil?
 				queue.push nil
-				return
+				break
 			end
 			nextblockhash = block_data.slice(found_idx + str.size, 64)
 			
@@ -175,7 +178,7 @@ if $0 == __FILE__
 		if (block_data.nil?)
 			puts "got nothing, saving and closing"
 			save(utxo, filename)
-			return
+			break
 		end
 		
 		utxo.process(block_data)
