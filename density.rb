@@ -16,7 +16,7 @@ class Density
 		@height = height
 		@data = Array.new(@width*@height, 0)
 	
-		@k_btc, @d_btc = calc_k_d(Math.log(min_btc), 0,	Math.log(max_btc),	@height)
+		@k_btc, @d_btc = calc_k_d(Math.log(min_btc), 0, Math.log(max_btc), @height)
 		@k_block, @d_block = calc_k_d(min_blockid, 0, max_blockid, @width)
 	
 		@num_points = 0
