@@ -74,7 +74,9 @@ if $0 == __FILE__
 				fout.printf("P6\n%d %d\n255\n", density.width, density.height)
 				fout.write(colorized)
 			end
-			`magick convert #{tmp_ppm_filename} img/#{utxo.height}.png`
+			img_name = sprintf("img/%05d.png", utxo.height/plot_interval)
+			
+			`magick convert #{tmp_ppm_filename} #{img_name}`
 		end
 		
 		now = Time.now

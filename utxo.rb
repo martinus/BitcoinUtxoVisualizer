@@ -79,7 +79,8 @@ class Utxo
 				val = vout["value"]
 				data.push(val)
 				
-				raise "tx error: tx=#{tx["vout"]}, i=#{i}, vout=#{vout["value"]}" if val <= 0 || i < 0
+				# val can be 0, that's ok. See e.g. tx 2f2442f68e38b980a6c4cec21e71851b0d8a5847d85208331a27321a9967bbd6
+				raise "tx error: tx=#{tx}, i=#{i}, vout=#{vout["value"]}" if val < 0 || i < 0
 			end	
 			@utxo[uid(tx["txid"])] = data
 			@nextblockhash = block_data["nextblockhash"]
