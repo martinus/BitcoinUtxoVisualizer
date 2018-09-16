@@ -1,4 +1,6 @@
 require "pp"
+require "./colormaps.rb"
+require "./density.rb"
 
 class Utxo
 	attr_reader :nextblockhash, :height, :hash, :time
@@ -96,125 +98,11 @@ end
 
 
 
-class Density
-	attr_reader :num_points
-	
-	def self.load(filename)
-		if File.file?(filename)
-			File.open(filename, "rb") do |f|
-				return Marshal.load(f)
-			end
-		end
-		nil
-	end
-
-	def initialize(width, height, min_btc, max_btc, min_blockid, max_blockid)
-		# tries to load and if it fails, creates new
-		@width = width
-		@height = height
-		@data = Array.new(@width*@height, 0)
-	
-		@k_btc, @d_btc = calc_k_d(Math.log(min_btc), 0,	Math.log(max_btc),	@height)
-		@k_block, @d_block = calc_k_d(min_blockid, 0, max_blockid, @width)
-	
-		@colormap = colormap_jet
-		@num_points = 0
-	end
-	
-	def save(filename)
-		File.open(filename, "wb") do |f|
-			Marshal.dump(self, f)
-		end
-	end
-	
-	def calc_k_d(x1, y1, x2, y2)
-		k = (y2.to_f - y1) / (x2 - x1)
-		d = y1 - k*x1
-		[k, d]
-	end
-	
-	def truncate(min, val, max)
-		if val < min
-			min
-		elsif val > max
-			max
-		else
-			val
-		end
-	end
-	
-	def colormap_jet
-		rgb = []
-		256.times do |i|
-			n = 4.0*i / 256
-			r = truncate(0, 255 * [n-1.5,-n+4.5].min, 255).to_i
-			g = truncate(0, 255 * [n-0.5,-n+3.5].min, 255).to_i
-			b = truncate(0, 255 * [n+0.5,-n+2.5].min, 255).to_i
-			
-			rgb.push [r, g, b].pack("CCC")
-		end
-		rgb
-	end	
-	
-	def block_amount_to_pixel(block_height, btc)
-		pixel_x = @k_block * block_height + @d_block
-		pixel_y = @height - (@k_btc * Math.log(btc) + @d_btc)
-		
-		#p [block_height, btc, pixel_x, pixel_y]
-		[truncate(0, pixel_x.to_i, @width-1), truncate(0, pixel_y.to_i, @height-1)]
-	end
-	
-	def add(block_height, btc)
-		x, y = block_amount_to_pixel(block_height, btc)
-		idx = y * @width + x
-		@data[idx] += 1
-		@num_points += 1
-	end
-	
-	def colorize
-		background = [0, 0, 0].pack("CCC")
-		#background = [255, 255, 255].pack("CCC")
-		
-		x_min = 1e100
-		x_max = 0
-		data = @data.map do |x|
-			if x == 0
-				0
-			else				
-				# scale
-				x /= 10.0
-				
-				# sigmoid
-				#x = 256 * Math.tanh(x)
-				x = 300 * x / (1+x)
-				#x = x/((1 + x*x)**0.5)
-				
-				x_min = [x_min, x].min
-				x_max = [x_max, x].max
-				x
-			end
-		end
-		
-		puts "min=#{x_min}, max=#{x_max}"
-		data = data.map do |x|
-			if x == 0
-				background
-			else
-				# truncate & 255
-				x = truncate(0, (x - x_min), 255).to_i
-				@colormap[x]
-			end
-		end
-		
-		data.join
-	end
-end
-
 
 t = Time.now
-density_filename = "density.bin"
+density_filename = "density_3840x2160.bin"
 utxo_filename = "utxo.bin"
-density = Density.load(density_filename) || Density.new(11000, 6188, 0.00000001, 100000, 0, 550000)
+density = Density.load(density_filename) || Density.new(3840, 2160, 0.00000001, 100000, 0, 550000)
 printf "%6.3f: density image initialized\n", Time.now - t; t = Time.now
 
 if 0 == density.num_points
@@ -246,7 +134,7 @@ if 0 == density.num_points
 	printf "%6.3f: density data saved\n", Time.now - t; t = Time.now
 end
 
-colorized = density.colorize
+colorized = density.colorize(ColorMaps.viridis)
 printf "%6.3f: colorized\n", Time.now - t; t = Time.now
 
 File.open("out.raw", "wb") do |fout|
