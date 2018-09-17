@@ -16,12 +16,14 @@ if $0 == __FILE__
 	br = BlockReader.new('http://127.0.0.1:8332')
 	utxo_filename = "utxo.bin"
 	
-	interval_save_seconds = 10*60
+	interval_save_seconds = 30*60
 	deadline_save = Time.now + interval_save_seconds
 	
 	plot_interval = 30
 
+	puts "loading/creating utxo"
 	utxo = Utxo.load(utxo_filename) || Utxo.new
+	puts "loading/creating done!"
 	
 	queue_blockdata = Queue.new
 	queue_imagedata = Queue.new
@@ -51,9 +53,12 @@ if $0 == __FILE__
 			# block_data not needed any more: push it to utxo worker
 			queue_blockdata.push(block_data)
 			
-			while queue_blockdata.size > 100
+			if queue_blockdata.size > 100
 				puts "fetcher: waiting, queue full. queues: #{queue_blockdata.size} -> #{queue_imagedata.size}"
-				sleep 1
+				while queue_blockdata.size > 50
+					sleep 0.1
+				end
+				puts "fetcher: continue fetching. queues: #{queue_blockdata.size} -> #{queue_imagedata.size}"
 			end
 		end
 	end
