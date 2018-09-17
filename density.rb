@@ -1,5 +1,5 @@
 class Density
-	attr_reader :num_points, :width, :height, :data
+	attr_reader :width, :height, :data
 	
 	def self.load(filename)
 		if File.file?(filename)
@@ -18,13 +18,6 @@ class Density
 	
 		@k_btc, @d_btc = calc_k_d(Math.log(min_btc), 0, Math.log(max_btc), @height)
 		@k_block, @d_block = calc_k_d(min_blockid, 0, max_blockid, @width)
-	
-		@num_points = 0
-	end
-	
-	def clear
-		@data.fill(0)
-		@num_points = 0
 	end
 	
 	def save(filename)
@@ -58,12 +51,13 @@ class Density
 		#p [block_height, btc, pixel_x, pixel_y]
 		[truncate(0, pixel_x.to_i, @width-1), truncate(0, pixel_y.to_i, @height-1)]
 	end
-	
-	def add(block_height, btc)
+
+	def modify(count, block_height, btc)
+		return if btc <= 0
+
 		x, y = block_amount_to_pixel(block_height, btc)
 		idx = y * @width + x
-		@data[idx] += 1
-		@num_points += 1
+		@data[idx] += count
 	end
 end
 

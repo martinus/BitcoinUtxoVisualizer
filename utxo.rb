@@ -1,6 +1,5 @@
 require "./blockreader.rb"
 
-require 'json'
 require 'pp'
 require 'date'
 
@@ -29,18 +28,38 @@ class Utxo
 		File.open(filename, "wb") do |f|
 			Marshal.dump(self, f)
 		end
+	end
+
+	# iterates all unspent outputs
+	def each(&vout_vin_handler)
+		@utxo.each_value do |unspent_source_outputs|
+			# content of unspent_source_outputs: 
+			# [block_height, voutnr_0, amount_0, voutnr_1, amount_1, ..., voutnr_n, amount_n]					
+			block_height = unspent_source_outputs[0]
+
+			# iterate all amounts
+			idx = 2
+			while idx < unspent_source_outputs.size
+				amount = unspent_source_outputs[idx]
+				vout_vin_handler.call(1, block_height, amount)
+				idx += 2				
+			end
+		end
 	end	
 	
-	def remove(vout, unspent_source_outputs)
+	def remove(vout, unspent_source_outputs, vout_vin_handler)
 		idx = 1
 		while idx < unspent_source_outputs.size
 			if vout == unspent_source_outputs[idx]
-			
+				# [block_height, voutnr_0, amount_0, voutnr_1, amount_1, ..., voutnr_n, amount_n]
+				block_height = unspent_source_outputs[0]
+				amount = unspent_source_outputs[idx + 1]
+				vout_vin_handler.call(-1, block_height, amount)
+
 				# replace with last 2 elements
 				unspent_source_outputs[idx] = unspent_source_outputs[-2]
 				unspent_source_outputs[idx+1] = unspent_source_outputs[-1]
-				unspent_source_outputs.pop
-				unspent_source_outputs.pop
+				unspent_source_outputs.pop(2)
 				return
 			end
 			idx += 2
@@ -49,8 +68,8 @@ class Utxo
 		raise "vout could not be found, something wrong!"
 	end
 	
-	def integrate_block_data(block_data_unparsed)
-		block_data = JSON.parse(block_data_unparsed)
+	# This should be fast
+	def integrate_block_data(block_data, &vout_vin_handler)
 		@height = block_data["height"]
 		@hash = block_data["hash"]
 		@time = block_data["time"]
@@ -64,7 +83,7 @@ class Utxo
 					source_vout = vin["vout"]
 					unspent_source_outputs = @utxo[source_txid]
 					
-					remove(source_vout, unspent_source_outputs)
+					remove(source_vout, unspent_source_outputs, vout_vin_handler)
 					
 					# if only block_height is left and no more output, remove the whole transaction
 					@utxo.delete(source_txid) if 1 == unspent_source_outputs.size
@@ -78,6 +97,9 @@ class Utxo
 				
 				val = vout["value"]
 				data.push(val)
+
+				# count is 1 to add this
+				vout_vin_handler.call(1, height, val)
 				
 				# val can be 0, that's ok. See e.g. tx 2f2442f68e38b980a6c4cec21e71851b0d8a5847d85208331a27321a9967bbd6
 				raise "tx error: tx=#{tx}, i=#{i}, vout=#{vout["value"]}" if val < 0 || i < 0

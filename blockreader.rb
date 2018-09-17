@@ -1,6 +1,8 @@
 require 'net/http'
 require 'uri'
 
+# Reads JSON block data from bitcoin server via the JSON interface.
+# see https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md
 class BlockReader
 	def initialize(uri)
 		@uri = uri
