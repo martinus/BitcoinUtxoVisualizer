@@ -28,9 +28,9 @@ if $0 == __FILE__
 	puts "loading/creating done!"
 	
 	# sized queues block when they are full
-	queue_blockdata = SizedQueue.new(100)
-	queue_jsondata = SizedQueue.new(100)
-	queue_imagedata = SizedQueue.new(100)
+	queue_blockdata = SizedQueue.new(20)
+	queue_jsondata = SizedQueue.new(20)
+	queue_imagedata = SizedQueue.new(20)
 	
 	# this thread fetches data from the bitcoin JSON service as fast as it can.
 	# It does minimal processing just to find out the nextblockhash so that the next block
@@ -38,11 +38,11 @@ if $0 == __FILE__
 	fetcher = Thread.new(utxo.nextblockhash) do |nextblockhash|
 		br = BlockReader.new(base_url)
 
-		block_count = 0
+		fetch_count = 0
 		loop do
 			block_data = br.block(nextblockhash)
-			block_count += 1
-			if block_count % 100 == 0
+			fetch_count += 1
+			if fetch_count % 100 == 0
 				puts "fetcher: fetched 100 blocks. currently at #{nextblockhash}, queue_blockdata: #{queue_blockdata.size} entries"
 			end
 			

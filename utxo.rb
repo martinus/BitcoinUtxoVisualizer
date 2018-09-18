@@ -1,5 +1,4 @@
 require "./blockreader.rb"
-
 require 'pp'
 require 'date'
 
@@ -25,9 +24,12 @@ class Utxo
 	end
 
 	def save(filename)
-		File.open(filename, "wb") do |f|
+		tmp_name = filename + ".tmp"
+		File.open(tmp_name, "wb") do |f|
 			Marshal.dump(self, f)
 		end
+		File.delete(filename) if File.exists?(filename)
+		File.rename(tmp_name, filename)		
 	end
 
 	# iterates all unspent outputs
