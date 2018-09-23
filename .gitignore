@@ -1,2 +1,9 @@
 out/
 3rdparty/
+
+# visual studio
+*.vcxproj.filters
+*.vcxproj.user
+.vs/
+Debug/
+Release/

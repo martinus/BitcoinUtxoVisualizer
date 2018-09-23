@@ -53,6 +53,7 @@ end
 
 if $0 == __FILE__
     require 'test/unit'
+    require 'pp'
 
     class MyTest < Test::Unit::TestCase
         def test_random_data
@@ -61,7 +62,7 @@ if $0 == __FILE__
             block_data = []
             10.times do
                 amounts = []
-                100_000.times do
+                rand(100_000).times do
                     # generate random data
                     block_height = rand(current_block_height + 1)
                     amount = rand((100 * 1e8).to_i)
@@ -69,11 +70,12 @@ if $0 == __FILE__
                 end
 
                 block_data.push [current_block_height, amounts]
+                current_block_height += 1
             end
 
             # serialize it
             filename = "out/tmp.bin"
-            FileUtils.rm(filename)
+            FileUtils.rm_f(filename)
             cs = ChangeSerializer::new(filename)
             block_data.each do |block_height, amounts|
                 cs.begin_block(block_height)
@@ -86,6 +88,7 @@ if $0 == __FILE__
             # load data
             t = Time.new
             read_data = ChangeSerializer::read(filename)
+            #pp read_data
             assert_equal(block_data, read_data)
         end
     end
