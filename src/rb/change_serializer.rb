@@ -62,7 +62,7 @@ if $0 == __FILE__
             block_data = []
             10.times do
                 amounts = []
-                rand(100_000).times do
+                rand(20).times do
                     # generate random data
                     block_height = rand(current_block_height + 1)
                     amount = rand((100 * 1e8).to_i)
@@ -74,9 +74,9 @@ if $0 == __FILE__
             end
 
             # serialize it
-            filename = "out/tmp.bin"
+            filename = "../../out/tmp.bin"
             FileUtils.rm_f(filename)
-            cs = ChangeSerializer::new(filename)
+            cs = ChangeSerializer.new(filename)
             block_data.each do |block_height, amounts|
                 cs.begin_block(block_height)
                 amounts.each do |height, amount, is_added|
