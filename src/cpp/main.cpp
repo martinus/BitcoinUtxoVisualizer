@@ -54,18 +54,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::cout << "opening " << argv[1] << std::endl;
-
-
+    std::string filename = argv[1];
     auto t = std::chrono::high_resolution_clock::now();
     Result r;
-    bv::parse_change_data(argv[1], r);
-    std::cout << dur(t) << " sec for " << r.numBlocks() << " blocks. sum=" << r.sum() << std::endl;
-
-    std::string filename = argv[1];
-    filename += ".blk";
-    t = std::chrono::high_resolution_clock::now();
-    r = Result{};
     bv::parse_change_data_v2(filename.c_str(), r);
     std::cout << dur(t) << " sec for " << r.numBlocks() << " blocks. sum=" << r.sum() << std::endl;
 }

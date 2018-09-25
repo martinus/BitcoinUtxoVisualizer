@@ -43,7 +43,7 @@ class Utxo
 			idx = 2
 			while idx < unspent_source_outputs.size
 				amount = unspent_source_outputs[idx]
-				vout_vin_handler.call(1, block_height, amount)
+				vout_vin_handler.call(block_height, amount)
 				idx += 2				
 			end
 		end
@@ -56,7 +56,7 @@ class Utxo
 				# [block_height, voutnr_0, amount_0, voutnr_1, amount_1, ..., voutnr_n, amount_n]
 				block_height = unspent_source_outputs[0]
 				amount = unspent_source_outputs[idx + 1]
-				vout_vin_handler.call(-1, block_height, amount)
+				vout_vin_handler.call(block_height, -amount)
 
 				# replace with last 2 elements
 				unspent_source_outputs[idx] = unspent_source_outputs[-2]
@@ -101,7 +101,7 @@ class Utxo
 				data.push(val)
 
 				# count is 1 to add this
-				vout_vin_handler.call(1, height, val)
+				vout_vin_handler.call(height, val)
 				
 				# val can be 0, that's ok. See e.g. tx 2f2442f68e38b980a6c4cec21e71851b0d8a5847d85208331a27321a9967bbd6
 				raise "tx error: tx=#{tx}, i=#{i}, vout=#{vout["value"]}" if val < 0 || i < 0
