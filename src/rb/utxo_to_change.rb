@@ -68,38 +68,32 @@ if $0 == __FILE__
 	end
 	
 	# does the bulk of the work: all the UTXO calculation stuff, and integrate the utxo data
-	utox_to_change = Thread.new do
-		deadline_save = Time.now + interval_save_seconds
-
-		cs = ChangeSerializer.new("change_#{utxo.height}")
-
-		loop do
-			block_data = queue_jsondata.pop
-			if (block_data.nil?)
-				puts "\tutox_to_change: got sentinel, saving and ending."
-				utxo.save(utxo_filename)
-				break
-			end
-			
-			# count: 1 for add, -1 for remove
-			cs.begin_block(utxo.height)
-			utxo.integrate_block_data(block_data) do |count, block_height, amount|
-				cs.add(block_height, (amount * 100_000_000).to_i)
-			end
-			
-			# deadline reached, save the current state
-			if Time.now >= deadline_save
-				puts "\tutox_to_change: saving #{utxo_filename}"
-				utxo.save(utxo_filename)
-				puts "\tutox_to_change: saving done"
-				deadline_save = Time.now + interval_save_seconds
-			end
-		end
-	end
+	deadline_save = Time.now + interval_save_seconds
 
 	loop do
-		break if !utox_to_change.alive?
-		puts "Queues: block -> json -> image: #{queue_blockdata.size} -> #{queue_jsondata.size}"
-		sleep 2
+		block_data = queue_jsondata.pop
+		if (block_data.nil?)
+			puts "\tutox_to_change: got sentinel, saving and ending."
+			utxo.save(utxo_filename)
+			break
+		end
+
+		filename = sprintf("../../out/change_%08d.bin", (block_data["height"] / 1000)*1000)
+		cs = ChangeSerializer.new(filename)
+		
+		# count: 1 for add, -1 for remove
+		cs.begin_block(block_data["height"])
+		utxo.integrate_block_data(block_data) do |count, block_height, amount|
+			cs.add(block_height, (amount * 100_000_000).to_i, count > 0)
+		end
+		cs.end_block
+		
+		# deadline reached, save the current state
+		if Time.now >= deadline_save
+			puts "\tutox_to_change: saving #{utxo_filename}"
+			utxo.save(utxo_filename)
+			puts "\tutox_to_change: saving done"
+			deadline_save = Time.now + interval_save_seconds
+		end
 	end
 end

@@ -7,7 +7,7 @@
 class Result
 {
 public:
-    void begin_block(uint32_t block_height, uint32_t num_changes)
+    void begin_block(uint32_t block_height)
     {
         ++mNumBlocks;
     }
@@ -15,6 +15,7 @@ public:
     void change(uint32_t height, int64_t amount)
     {
         mSum += amount;
+
         mHeights += height;
     }
 
@@ -55,9 +56,16 @@ int main(int argc, char** argv)
 
     std::cout << "opening " << argv[1] << std::endl;
 
-    Result r;
 
     auto t = std::chrono::high_resolution_clock::now();
+    Result r;
     bv::parse_change_data(argv[1], r);
+    std::cout << dur(t) << " sec for " << r.numBlocks() << " blocks. sum=" << r.sum() << std::endl;
+
+    std::string filename = argv[1];
+    filename += ".blk";
+    t = std::chrono::high_resolution_clock::now();
+    r = Result{};
+    bv::parse_change_data_v2(filename.c_str(), r);
     std::cout << dur(t) << " sec for " << r.numBlocks() << " blocks. sum=" << r.sum() << std::endl;
 }
