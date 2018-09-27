@@ -9,13 +9,17 @@ class Result
 public:
     void begin_block(uint32_t block_height)
     {
-        ++mNumBlocks;
+        ++mLastBlock;
+        if (mLastBlock != block_height) {
+            std::cout << "got " << block_height << " expected " << mLastBlock << std::endl;
+            mLastBlock = block_height;
+        }
     }
 
     void change(uint32_t height, int64_t amount)
     {
+        ++mNumChanges;
         mSum += amount;
-
         mHeights += height;
     }
 
@@ -34,8 +38,20 @@ public:
         return mSum;
     }
 
+    uint64_t changes() const
+    {
+        return mNumChanges;
+    }
+
+    uint32_t lastBlock() const
+    {
+        return mLastBlock;
+    }
+
 private:
+    uint32_t mLastBlock = -1;
     int64_t mSum = 0;
+    uint64_t mNumChanges = 0;
     uint32_t mHeights = 0;
     size_t mNumBlocks = 0;
 };
@@ -54,9 +70,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
+
     std::string filename = argv[1];
     auto t = std::chrono::high_resolution_clock::now();
     Result r;
-    bv::parse_change_data_v2(filename.c_str(), r);
-    std::cout << dur(t) << " sec for " << r.numBlocks() << " blocks. sum=" << r.sum() << std::endl;
+    bool isOk = bv::parse_change_data_v2(filename.c_str(), r);
+    std::cout << dur(t) << " sec for " << r.numBlocks() << " blocks. changes: " << r.changes() << ", sum=" << r.sum() << ", last block=" << r.lastBlock() << std::endl;
+    std::cout << "ok? " << (isOk ? "YES" : "NO") << std::endl;
 }
