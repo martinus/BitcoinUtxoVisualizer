@@ -17,9 +17,13 @@ public:
     {
     }
 
-    inline void read(char* target, size_t num_bytes)
+    // templated size_t can be a bit faster than normal read() because the compiler could
+    // inline it.
+    template <typename T>
+    void read(T& target_blob)
     {
-        for (size_t i = 0; i < num_bytes; ++i) {
+        char* const target = reinterpret_cast<char*>(&target_blob);
+        for (size_t i = 0; i < sizeof(T); ++i) {
             if (mIdx == BufferSize && !fetch()) {
                 return;
             }
@@ -27,24 +31,15 @@ public:
         }
     }
 
-    template <size_t NumBytes>
-    inline void read(char* target)
-    {
-        for (size_t i = 0; i < NumBytes; ++i) {
-            if (mIdx == BufferSize && !fetch()) {
-                return;
-            }
-            target[i] = mBuf[mIdx++];
-        }
-    }
-
-	// the compiler is not smart enough to optimize the read<1> call as much as the read1.
-    inline void read1(char* target)
+    // the compiler is not smart enough to optimize the read<1> call as much as this hand written
+    // code.
+    template <typename T>
+    void read1(T& target_blob)
     {
         if (mIdx == BufferSize && !fetch()) {
             return;
         }
-        *target = mBuf[mIdx++];
+        *reinterpret_cast<char*>(&target_blob) = mBuf[mIdx++];
     }
 
     bool eof() const
@@ -67,6 +62,7 @@ private:
             if (0 == num_bytes_read) {
                 return false;
             }
+
             mIdx = BufferSize - num_bytes_read;
             std::memmove(mBuf.data() + mIdx, mBuf.data(), num_bytes_read);
             return true;

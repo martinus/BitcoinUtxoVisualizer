@@ -28,11 +28,6 @@ public:
         std::cout << "block done!" << std::endl;
     }
 
-    size_t numBlocks() const
-    {
-        return mNumBlocks;
-    }
-
     int64_t sum() const
     {
         return mSum;
@@ -53,7 +48,6 @@ private:
     int64_t mSum = 0;
     uint64_t mNumChanges = 0;
     uint32_t mHeights = 0;
-    size_t mNumBlocks = 0;
 };
 
 
@@ -75,6 +69,9 @@ int main(int argc, char** argv)
     auto t = std::chrono::high_resolution_clock::now();
     Result r;
     bool isOk = bv::parse_change_data_v2(filename.c_str(), r);
-    std::cout << dur(t) << " sec for " << r.numBlocks() << " blocks. changes: " << r.changes() << ", sum=" << r.sum() << ", last block=" << r.lastBlock() << std::endl;
+    auto duration = dur(t);
+    std::cout << duration << " sec. changes: " << r.changes() << ", sum=" << r.sum() << ", last block=" << r.lastBlock() << std::endl;
+    std::cout << (r.changes() / (dur(t) * 1000'000)) << "M changes per second" << std::endl;
+
     std::cout << "ok? " << (isOk ? "YES" : "NO") << std::endl;
 }

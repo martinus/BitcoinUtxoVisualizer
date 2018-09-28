@@ -6,12 +6,14 @@ source_files = Dir["../../out/0*.blk"].sort
 source_files.pop
 
 t = Time.now
-File.open(target_file, "ab") do |output_stream|
+
+puts "creating #{target_file}"
+File.open(target_file, "wb") do |output_stream|
 	source_files.each do |source|
+		puts "appending #{source}"
 		File.open(source, "rb") do |source_stream|
 			IO.copy_stream(source_stream, output_stream)
 		end
-		printf "."
 	end
 end
 puts "done in #{Time.now - t} sec"
