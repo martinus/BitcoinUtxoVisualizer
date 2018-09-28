@@ -10,6 +10,7 @@ require "./change_serializer.rb"
 
 require 'thread' # for SizedQueue
 require 'json'
+require 'fileutils'
 
 if $0 == __FILE__
 	base_url = 'http://127.0.0.1:8332'
@@ -19,8 +20,12 @@ if $0 == __FILE__
 	interval_save_seconds = 60*60
 	
 	puts "loading/creating utxo"
-	#utxo = Utxo.load(utxo_filename) || Utxo.new
 	utxo = Utxo.new
+	utxo_filename = "unknown.utxo"
+	if ARGV[0]
+		utxo_filename = ARGV[0]
+		utxo = Utxo.load(utxo_filename)
+	end
 	puts "loading/creating done!"
 
 	block_height = 0
@@ -54,7 +59,11 @@ if $0 == __FILE__
 		# got good data, integrate it
 		nextblockhash = block_data["nextblockhash"]
 
-		filename = sprintf(filename_pattern, block_data["height"]) if filename.nil?
+		if filename.nil?
+			filename = sprintf(filename_pattern, block_data["height"])
+			# new filename, don't append to existine file but create a new one.
+			FileUtils.rm_f(filename)
+		end
 		cs = ChangeSerializer.new(filename + ".blk")
 		cs.begin_block(block_data["height"])
 		utxo.integrate_block_data(block_data) do |block_height, amount|
@@ -64,8 +73,8 @@ if $0 == __FILE__
 		
 		# if deadline reached, safe utxo and switch to a new filename
 		if Time.now >= deadline_save
-			puts "\tutox_to_change: saving #{filename}.utxo"
-			utxo.save(filename + ".utxo")
+			puts "\tutox_to_change: saving #{utxo_filename}"
+			utxo.save(utxo_filename)
 			puts "\tutox_to_change: saving done"
 			deadline_save = Time.now + interval_save_seconds
 			filename = nil

@@ -4,50 +4,62 @@
 #include <cstdint>
 #include <iostream>
 
-class Result
-{
-public:
+struct AverageNumberOfOutputs {
     void begin_block(uint32_t block_height)
     {
-        ++mLastBlock;
-        if (mLastBlock != block_height) {
-            std::cout << "got " << block_height << " expected " << mLastBlock << std::endl;
-            mLastBlock = block_height;
+        if (block_height > m_max_block) {
+            m_max_block = block_height;
+        }
+        if (block_height < m_min_block) {
+            m_min_block = block_height;
         }
     }
 
     void change(uint32_t height, int64_t amount)
     {
-        ++mNumChanges;
-        mSum += amount;
-        mHeights += height;
+        if (amount >= 0) {
+            ++m_num_outputs_created;
+        } else {
+            ++m_num_outputs_destroyed;
+        }
     }
 
-    void end_block()
+    void end_block(uint32_t block_height)
     {
-        std::cout << "block done!" << std::endl;
+        ++m_num_blocks;
     }
 
-    int64_t sum() const
+    uint32_t m_min_block = std::numeric_limits<uint32_t>::max();
+    uint32_t m_max_block = 0;
+
+    uint64_t m_num_outputs_created = 0;
+    uint64_t m_num_outputs_destroyed = 0;
+    uint64_t m_num_blocks = 0;
+};
+
+struct CheckSequential {
+    void begin_block(uint32_t block_height)
     {
-        return mSum;
+        if (block_height != m_last_block + 1) {
+            std::cout << "begin_block: expected block " << (m_last_block + 1) << " but got " << block_height << std::endl;
+        }
+        m_last_block = block_height;
     }
 
-    uint64_t changes() const
+    void change(uint32_t, int64_t)
     {
-        return mNumChanges;
+        ++m_num_changes;
     }
 
-    uint32_t lastBlock() const
+    void end_block(uint32_t block_height)
     {
-        return mLastBlock;
+        if (block_height != m_last_block) {
+            std::cout << "end_block: expected block " << m_last_block << " but got " << block_height << std::endl;
+        }
     }
 
-private:
-    uint32_t mLastBlock = -1;
-    int64_t mSum = 0;
-    uint64_t mNumChanges = 0;
-    uint32_t mHeights = 0;
+    uint32_t m_last_block = -1;
+    uint64_t m_num_changes = 0;
 };
 
 
@@ -67,11 +79,19 @@ int main(int argc, char** argv)
 
     std::string filename = argv[1];
     auto t = std::chrono::high_resolution_clock::now();
-    Result r;
+    CheckSequential r;
     bool isOk = bv::parse_change_data_v2(filename.c_str(), r);
-    auto duration = dur(t);
-    std::cout << duration << " sec. changes: " << r.changes() << ", sum=" << r.sum() << ", last block=" << r.lastBlock() << std::endl;
-    std::cout << (r.changes() / (dur(t) * 1000'000)) << "M changes per second" << std::endl;
+    std::cout << "done in " << dur(t) << " seconds." << std::endl;
+    std::cout << "Parsing ok? " << (isOk ? "YES" : "NO") << std::endl;
 
-    std::cout << "ok? " << (isOk ? "YES" : "NO") << std::endl;
+    std::cout << "m_num_changes=" << r.m_num_changes << std::endl;
+
+    /*
+    std::cout << r.m_num_outputs_created << " outputs created (" << (r.m_num_outputs_created * 1.0 / r.m_num_blocks) << " per block)" << std::endl;
+    std::cout << r.m_num_outputs_destroyed << " outputs destroyed (" << (r.m_num_outputs_destroyed * 1.0 / r.m_num_blocks) << " per block)" << std::endl;
+    std::cout << (r.m_num_outputs_created - r.m_num_outputs_destroyed) << " outputs remain" << std::endl;
+
+    std::cout << r.m_min_block << " min block" << std::endl;
+    std::cout << r.m_max_block << " max block" << std::endl;
+	*/
 }

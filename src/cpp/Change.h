@@ -7,23 +7,27 @@ namespace bv {
 template <typename S, typename T>
 size_t decode_uint(S& is, T& val)
 {
+    static_assert(std::is_unsigned<T>::value, "only for unsigned types");
+
     int num_bytes = 0;
     val = 0;
     uint8_t byte;
-    do {
-        is.read1(byte);
+    is.read1(byte);
+    while (byte & 0b10000000) {
         val |= static_cast<T>(byte & 0b01111111) << (7 * num_bytes);
         ++num_bytes;
-    } while (byte > 0b01111111);
-    return num_bytes;
+        is.read1(byte);
+    }
+    val |= static_cast<T>(byte) << (7 * num_bytes);
+    return num_bytes + 1;
 }
 
-template <typename S, typename T>
-size_t decode_int(S& is, T& val)
+template <typename S>
+size_t decode_int32(S& is, int32_t& val)
 {
-    T v;
+    uint32_t v;
     auto num_bytes = decode_uint(is, v);
-    val = static_cast<T>((v >> 1) ^ -(v & 1));
+    val = static_cast<int32_t>((v >> 1) ^ (uint32_t)0 - (v & 1));
     return num_bytes;
 }
 
@@ -48,20 +52,21 @@ bool parse_change_data_v2(const char* filename, T& result)
             return false;
         }
 
-        uint32_t block_height;
-        bsr.read(block_height);
-        result.begin_block(block_height);
+        uint32_t current_block_height;
+        bsr.read(current_block_height);
+        result.begin_block(current_block_height);
 
         uint32_t num_bytes_total;
         bsr.read(num_bytes_total);
 
         // read first dataset
         int64_t amount;
+        uint32_t amount_block_height;
         bsr.read(amount);
-        bsr.read(block_height);
-        result.change(block_height, amount);
+        bsr.read(amount_block_height);
+        result.change(amount_block_height, amount);
 
-        size_t bytes_read = sizeof(amount) + sizeof(block_height);
+        size_t bytes_read = sizeof(amount) + sizeof(amount_block_height);
 
         while (bytes_read < num_bytes_total) {
             uint64_t amount_diff;
@@ -69,10 +74,12 @@ bool parse_change_data_v2(const char* filename, T& result)
             amount += amount_diff;
 
             int32_t block_height_diff;
-            bytes_read += decode_int(bsr, block_height_diff);
-            block_height += block_height_diff;
-            result.change(block_height, amount);
+            bytes_read += decode_int32(bsr, block_height_diff);
+            amount_block_height += block_height_diff;
+            result.change(amount_block_height, amount);
         }
+
+        result.end_block(current_block_height);
     }
 
     return true;
