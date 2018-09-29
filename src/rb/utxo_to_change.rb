@@ -15,21 +15,21 @@ require 'fileutils'
 if $0 == __FILE__
 	base_url = 'http://127.0.0.1:8332'
 
-	filename_pattern = "../../out/%08d"
+	dir = "../../out/blocks/"
+	filename_pattern = "#{dir}%08d.blk"
 	
 	interval_save_seconds = 60*60
 	
 	puts "loading/creating utxo"
 	utxo = Utxo.new
-	utxo_filename = "unknown.utxo"
-	if ARGV[0]
-		utxo_filename = ARGV[0]
+	utxo_filename = "#{dir}last.utxo"
+	if File.exists?(utxo_filename)
 		utxo = Utxo.load(utxo_filename)
 	end
 	puts "loading/creating done!"
 
 	block_height = 0
-	filename = nil
+	blk_filename = nil
 	
 	br = BlockReader.new(base_url)
 
@@ -37,13 +37,14 @@ if $0 == __FILE__
 	deadline_save = Time.now + interval_save_seconds
 	fetch_count = 0
 	nextblockhash = utxo.nextblockhash
+
 	loop do
 		# fetch block and see if we have good data
 		block_data = JSON.parse(br.block(nextblockhash))
 
 		fetch_count += 1
 		if fetch_count % 100 == 0
-			printf "X"
+			printf "\n#{block_data["height"]}"
 		elsif fetch_count % 10 == 0
 			printf "o"
 		else
@@ -56,15 +57,14 @@ if $0 == __FILE__
 			next
 		end
 
-		# got good data, integrate it
-		nextblockhash = block_data["nextblockhash"]
-
-		if filename.nil?
-			filename = sprintf(filename_pattern, block_data["height"])
+		if blk_filename.nil?
+			blk_filename = sprintf(filename_pattern, block_data["height"])
 			# new filename, don't append to existine file but create a new one.
-			FileUtils.rm_f(filename)
+			p blk_filename
+			FileUtils.rm_f(blk_filename)
 		end
-		cs = ChangeSerializer.new(filename + ".blk")
+
+		cs = ChangeSerializer.new(blk_filename)
 		cs.begin_block(block_data["height"])
 		utxo.integrate_block_data(block_data) do |block_height, amount|
 			cs.add(block_height, (amount * 100_000_000).round)
@@ -75,9 +75,14 @@ if $0 == __FILE__
 		if Time.now >= deadline_save
 			puts "\tutox_to_change: saving #{utxo_filename}"
 			utxo.save(utxo_filename)
-			puts "\tutox_to_change: saving done"
+			puts "\tutox_to_change: saving done. Loading to clean up memory"
+			utxo = Utxo.load(utxo_filename)
+			puts "\tutox_to_change: loading done!"
 			deadline_save = Time.now + interval_save_seconds
-			filename = nil
+			blk_filename = nil
 		end
+
+		# got good data, integrate it
+		nextblockhash = block_data["nextblockhash"]
 	end
 end
