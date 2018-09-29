@@ -81,10 +81,13 @@ int main(int argc, char** argv)
     auto t = std::chrono::high_resolution_clock::now();
     CheckSequential r;
     bool isOk = bv::parse_change_data_v2(filename.c_str(), r);
-    std::cout << "done in " << dur(t) << " seconds." << std::endl;
+    auto duration = dur(t);
+    std::cout << "done in " << duration << " seconds." << std::endl;
     std::cout << "Parsing ok? " << (isOk ? "YES" : "NO") << std::endl;
 
     std::cout << "m_num_changes=" << r.m_num_changes << std::endl;
+    std::cout << (r.m_num_changes / (duration * 1000'000)) << "M changes per second" << std::endl;
+
 
     /*
     std::cout << r.m_num_outputs_created << " outputs created (" << (r.m_num_outputs_created * 1.0 / r.m_num_blocks) << " per block)" << std::endl;
