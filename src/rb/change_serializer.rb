@@ -41,6 +41,7 @@ class ChangeSerializer
         rescue Errno::EACCES => e
             STDERR.puts "could not open file: #{e}. Retrying in 1 second"
             sleep 1
+            retry
         end
     end
 
