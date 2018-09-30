@@ -123,8 +123,10 @@
     <ClCompile Include="..\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Blk.h" />
     <ClInclude Include="..\BufferedStreamReader.h" />
-    <ClInclude Include="..\Change.h" />
+    <ClInclude Include="..\Density.h" />
+    <ClInclude Include="..\LinearFunction.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

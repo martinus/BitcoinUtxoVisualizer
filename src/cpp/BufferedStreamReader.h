@@ -5,9 +5,8 @@
 
 namespace bv {
 
-// unfortunately, reading byte by byte from an std::ifstream is incredibly slow, as each
-// call to read() has a virtual call overhead. Using this class as a wrapper speeds up
-// the parsing from about 5M to 80M - 16 times faster.
+// Reading byte by byte from an std::ifstream is incredibly slow, as each call to read() has
+// virtual call overheads. Using this class as a wrapper speeds up the parsing more than 10x
 template <size_t BufferSize = 32 * 1024>
 class BufferedStreamReader
 {

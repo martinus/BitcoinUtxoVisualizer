@@ -1,42 +1,15 @@
-#include "Change.h"
+#include "Blk.h"
+#include "Density.h"
 
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <unordered_set>
 
-struct AverageNumberOfOutputs {
-    void begin_block(uint32_t block_height)
-    {
-        if (block_height > m_max_block) {
-            m_max_block = block_height;
-        }
-        if (block_height < m_min_block) {
-            m_min_block = block_height;
-        }
-    }
+#include <intrin.h>
 
-    void change(uint32_t height, int64_t amount)
-    {
-        if (amount >= 0) {
-            ++m_num_outputs_created;
-        } else {
-            ++m_num_outputs_destroyed;
-        }
-    }
-
-    void end_block(uint32_t block_height)
-    {
-        ++m_num_blocks;
-    }
-
-    uint32_t m_min_block = std::numeric_limits<uint32_t>::max();
-    uint32_t m_max_block = 0;
-
-    uint64_t m_num_outputs_created = 0;
-    uint64_t m_num_outputs_destroyed = 0;
-    uint64_t m_num_blocks = 0;
-};
-
+// check if all blocks are in sequential order
 struct CheckSequential {
     void begin_block(uint32_t block_height)
     {
@@ -79,15 +52,23 @@ int main(int argc, char** argv)
 
     std::string filename = argv[1];
     auto t = std::chrono::high_resolution_clock::now();
+    bv::Density density(2560, 1440, 1, 10'000ULL * 100'000'000, 0, 550'000);
+    bool isOk = bv::Blk::decode(filename, density);
+    auto duration = dur(t);
+    std::cout << "done in " << duration << " seconds." << std::endl;
+    std::cout << "Parsing ok? " << (isOk ? "YES" : "NO") << std::endl;
+
+
+    /*
     CheckSequential r;
-    bool isOk = bv::parse_change_data_v2(filename.c_str(), r);
+    bool isOk = bv::parse_change_data(filename.c_str(), r);
     auto duration = dur(t);
     std::cout << "done in " << duration << " seconds." << std::endl;
     std::cout << "Parsing ok? " << (isOk ? "YES" : "NO") << std::endl;
 
     std::cout << "m_num_changes=" << r.m_num_changes << std::endl;
     std::cout << (r.m_num_changes / (duration * 1000'000)) << "M changes per second" << std::endl;
-
+	*/
 
     /*
     std::cout << r.m_num_outputs_created << " outputs created (" << (r.m_num_outputs_created * 1.0 / r.m_num_blocks) << " per block)" << std::endl;
