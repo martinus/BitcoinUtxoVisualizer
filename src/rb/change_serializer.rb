@@ -12,37 +12,38 @@ class ChangeSerializer
     end
 
     def end_block        
-        begin            
+        @changes.sort!
+
+        # int64_t amount, uint32_t block_height
+        str = ""
+        str << @changes.first.pack("qL")
+        previous_amount = @changes.first[0]
+        previous_block_height = @changes.first[1]
+
+        (1...@changes.size).each do |i|
+            amount, block_height = @changes[i]
+
+            VarInt.encode_uint(str, amount - previous_amount)
+            VarInt.encode_int(str, block_height - previous_block_height)
+
+            previous_amount = amount
+            previous_block_height = block_height
+        end
+
+        begin                
             File.open(@filename, "ab") do |f|
                 f.write "BLK\0"
                 f.write [@block_height].pack("L") # uint32_t
-                
-                @changes.sort!
-
-                # int64_t amount, uint32_t block_height
-                str = ""
-                str << @changes.first.pack("qL")
-                previous_amount = @changes.first[0]
-                previous_block_height = @changes.first[1]
-
-                (1...@changes.size).each do |i|
-                    amount, block_height = @changes[i]
-
-                    VarInt.encode_uint(str, amount - previous_amount)
-                    VarInt.encode_int(str, block_height - previous_block_height)
-
-                    previous_amount = amount
-                    previous_block_height = block_height
-                end
                 f.write [str.size].pack("L") # uint32_t
                 f.write str
             end
-            begin_block(nil)
         rescue Errno::EACCES => e
             STDERR.puts "could not open file: #{e}. Retrying in 1 second"
             sleep 1
             retry
         end
+        
+        begin_block(nil)
     end
 
     def add(block_height, amount_satoshi)
