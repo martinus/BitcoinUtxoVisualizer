@@ -1,9 +1,14 @@
 target_file = "../../out/all.blk"
 
-source_files = Dir["../../out/0*.blk"].sort
+source_files = Dir["../../out/blocks/0*.blk"].sort
 
 # skip last one, it's not finished
-source_files.pop
+#source_files.pop
+
+if source_files.empty?
+	puts "Could not find any file to add, quitting"
+	exit(1)
+end
 
 t = Time.now
 
