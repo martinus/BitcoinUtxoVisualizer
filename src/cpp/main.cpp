@@ -1,4 +1,5 @@
 #include "Blk.h"
+#include "ColorMap.h"
 #include "Density.h"
 
 #include <chrono>
@@ -52,8 +53,26 @@ int main(int argc, char** argv)
 
     std::string filename = argv[1];
     auto t = std::chrono::high_resolution_clock::now();
-    bv::Density density(2560, 1440, 1, 10'000ULL * 100'000'000, 0, 550'000);
+
+
+    size_t const density_per_pixel = static_cast<size_t>(1000) * 3840 * 2160;
+    size_t const width = 3840;
+    size_t const height = 2160;
+    size_t const max_included_density = 800;
+
+    bv::Density density(
+        width,                   // width
+        height,                  // height
+        1,                       // minimum satoshi
+        10'000ULL * 100'000'000, // max satoshi,
+        0,                       // minimum block height
+        550'000,                 // maximum block height
+        max_included_density,    // max included density value for colorization
+        bv::ColorMap::viridis()  // colorization type
+    );
     bool isOk = bv::Blk::decode(filename, density);
+    density.save_image_ppm("final.ppm");
+
     auto duration = dur(t);
     std::cout << "done in " << duration << " seconds." << std::endl;
     std::cout << "Parsing ok? " << (isOk ? "YES" : "NO") << std::endl;
