@@ -24,7 +24,13 @@ if $0 == __FILE__
 	utxo = Utxo.new
 	utxo_filename = "#{dir}last.utxo"
 	if File.exists?(utxo_filename)
+		puts "GC.start"
+		GC.start
+		puts "done"
 		utxo = Utxo.load(utxo_filename)
+		puts "GC.start"
+		GC.start
+		puts "done"
 	end
 	puts "loading/creating done!"
 
@@ -76,6 +82,9 @@ if $0 == __FILE__
 			puts "\tutox_to_change: saving #{utxo_filename}"
 			utxo.save(utxo_filename)
 			puts "\tutox_to_change: saving done. Loading to clean up memory"
+			# set to nil, THEN call load, so we don't need duplicate memory
+			utxo = nil
+			GC.start
 			utxo = Utxo.load(utxo_filename)
 			puts "\tutox_to_change: loading done!"
 			deadline_save = Time.now + interval_save_seconds

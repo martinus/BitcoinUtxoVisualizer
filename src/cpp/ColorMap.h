@@ -25,7 +25,7 @@ public:
         }
     }
 
-    void write_rgb(uint8_t value, uint8_t* target) const
+    void write_rgb(int value, uint8_t* target) const
     {
         int idx = value * 3;
         target[0] = m_rgb[idx];

@@ -10,7 +10,7 @@ class Blk
 {
 public:
     template <class T>
-    static bool decode(std::string filename, T& callback)
+    static bool decode(std::string filename, T& callback, uint32_t* last_block_height)
     {
         std::ifstream fin(filename, std::ios::binary);
         if (!fin.is_open()) {
@@ -19,10 +19,14 @@ public:
 
         BufferedStreamReader<> bsr(fin);
 
+        uint32_t current_block_height;
         while (true) {
             uint32_t magick_BLK0;
             bsr.read(magick_BLK0);
             if (bsr.eof()) {
+                if (last_block_height) {
+                    *last_block_height = current_block_height;
+                }
                 break;
             }
 
@@ -31,7 +35,6 @@ public:
                 return false;
             }
 
-            uint32_t current_block_height;
             bsr.read(current_block_height);
             callback.begin_block(current_block_height);
 

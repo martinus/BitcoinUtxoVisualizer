@@ -31,10 +31,28 @@ public:
             m_rgb[pixel_idx * 3 + 1] = 0;
             m_rgb[pixel_idx * 3 + 2] = 0;
         } else {
-            auto const x = m_fact * std::log2(static_cast<double>(density));
-            auto const coloridx = truncate<uint8_t>(0, x, 255);
+            auto const x = m_fact * std::log(static_cast<double>(density));
+            auto const coloridx = x >= 255 ? 255 : static_cast<int>(x);
             m_colormap.write_rgb(coloridx, &m_rgb[pixel_idx * 3]);
         }
+    }
+
+    void set_rgb(size_t pixel_idx, uint8_t r, uint8_t g, uint8_t b)
+    {
+        m_rgb[pixel_idx * 3] = r;
+        m_rgb[pixel_idx * 3 + 1] = g;
+        m_rgb[pixel_idx * 3 + 2] = b;
+    }
+
+    char const* data() const
+    {
+        return reinterpret_cast<char const*>(m_rgb.data());
+    }
+
+    // size in bytes
+    size_t size() const
+    {
+        return m_rgb.size();
     }
 
 private:

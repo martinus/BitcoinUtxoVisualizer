@@ -3,7 +3,7 @@
 namespace bv {
 
 template <typename T>
-static T truncate(T min, double val, T max)
+static T truncate(T min, T val, T max)
 {
     if (val <= min) {
         return min;
@@ -11,7 +11,13 @@ static T truncate(T min, double val, T max)
     if (val >= max) {
         return max;
     }
-    return static_cast<T>(val);
+    return val;
+}
+
+template <typename T>
+static T truncate(T val, T max)
+{
+    return val >= max ? max : val;
 }
 
 } // namespace bv

@@ -56,22 +56,29 @@ int main(int argc, char** argv)
 
 
     size_t const density_per_pixel = static_cast<size_t>(1000) * 3840 * 2160;
-    size_t const width = 3840;
-    size_t const height = 2160;
-    size_t const max_included_density = 800;
+    size_t const width = 2560;
+    size_t const height = 1440;
+    size_t const max_included_density = 2000;
 
+    uint32_t const stream_every_x_block = std::numeric_limits<uint32_t>::max();
+    //uint32_t const stream_every_x_block = 100;
+    std::cout.setf(std::ios_base::binary);
     bv::Density density(
         width,                   // width
         height,                  // height
         1,                       // minimum satoshi
         10'000ULL * 100'000'000, // max satoshi,
         0,                       // minimum block height
-        550'000,                 // maximum block height
-        max_included_density,    // max included density value for colorization
-        bv::ColorMap::viridis()  // colorization type
+        550'000                  // maximum block height
     );
-    bool isOk = bv::Blk::decode(filename, density);
-    density.save_image_ppm("final.ppm");
+    uint32_t last_block_height;
+    bool isOk = bv::Blk::decode(filename, density, &last_block_height);
+    std::cout << last_block_height << " last block height" << std::endl;
+
+    bv::DensityToImage toi(width, height, max_included_density, // max included density value for colorization
+        bv::ColorMap::viridis());                               // colorization type
+
+    density.save_image_ppm(toi, "final.ppm");
 
     auto duration = dur(t);
     std::cout << "done in " << duration << " seconds." << std::endl;
