@@ -27,7 +27,8 @@ public:
           m_fn_block(static_cast<double>(min_blockid), 0, static_cast<double>(max_blockid), static_cast<double>(m_width)),
           m_data(m_width * m_height, 0),
           m_pixel_set(m_width * m_height),
-          m_socket_stream(SocketStream::create("127.0.0.1", 12987))
+          m_socket_stream(SocketStream::create("127.0.0.1", 12987)),
+          m_density_to_image(m_width, m_height, 2000, bv::ColorMap::viridis())
     {
     }
 
@@ -56,28 +57,22 @@ public:
 
     void end_block(uint32_t block_height)
     {
-        //if ((block_height % 300) == 0) {
-            std::cout << ".";
-            std::cout.flush();
-
-            bv::DensityToImage toi(m_width, m_height, 2000, bv::ColorMap::viridis());
-
-            for (size_t pixel_idx = 0; pixel_idx < m_width * m_height; ++pixel_idx) {
-                toi.update(pixel_idx, m_data[pixel_idx]);
-            }
+        if ((block_height % 30) == 0) {
+            // temporarily set all updated pixels to white
             for (auto pixel_idx : m_pixel_set) {
-                toi.set_rgb(pixel_idx, 255, 255, 255);
+                m_density_to_image.set_rgb(pixel_idx, 255, 255, 255);
             }
 
-            m_socket_stream->write(toi.data(), toi.size());
+            m_socket_stream->write(m_density_to_image.data(), m_density_to_image.size());
 
-            //std::ofstream fout("imagedata.bin", std::ios::binary | std::ios::app);
-            //fout.write(toi.data(), toi.size());
-
+            // now re-update all the updated pixels that have changed since the last update
+            for (auto pixel_idx : m_pixel_set) {
+                m_density_to_image.update(pixel_idx, m_data[pixel_idx]);
+            }
 
             //save_image_ppm(toi, fname);
             m_pixel_set.clear();
-        //}
+        }
     }
 
     // saves current status of the image as a PPM file
@@ -108,6 +103,7 @@ private:
     std::vector<size_t> m_data;
     PixelSet m_pixel_set;
     std::unique_ptr<SocketStream> m_socket_stream;
+    DensityToImage m_density_to_image;
 };
 
 } // namespace bv
