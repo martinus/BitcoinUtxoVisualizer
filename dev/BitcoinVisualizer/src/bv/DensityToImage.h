@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ColorMap.h"
-#include "truncate.h"
+#include <bv/ColorMap.h>
+#include <bv/truncate.h>
 
 #include <cstdint>
 #include <vector>
@@ -37,11 +37,20 @@ public:
         }
     }
 
-    void set_rgb(size_t pixel_idx, uint8_t r, uint8_t g, uint8_t b)
+    void rgb(size_t pixel_idx, std::array<uint8_t, 3> rgb)
     {
-        m_rgb[pixel_idx * 3] = r;
-        m_rgb[pixel_idx * 3 + 1] = g;
-        m_rgb[pixel_idx * 3 + 2] = b;
+        m_rgb[pixel_idx * 3] = rgb[0];
+        m_rgb[pixel_idx * 3 + 1] = rgb[1];
+        m_rgb[pixel_idx * 3 + 2] = rgb[2];
+    }
+
+    std::array<uint8_t, 3> rgb(size_t pixel_idx) const
+    {
+        std::array<uint8_t, 3> rgb;
+        rgb[0] = m_rgb[pixel_idx * 3];
+        rgb[1] = m_rgb[pixel_idx * 3 + 1];
+        rgb[2] = m_rgb[pixel_idx * 3 + 2];
+        return rgb;
     }
 
     char const* data() const

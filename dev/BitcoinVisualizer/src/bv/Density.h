@@ -1,11 +1,11 @@
 #pragma once
 
-#include "ColorMap.h"
-#include "DensityToImage.h"
-#include "LinearFunction.h"
-#include "PixelSet.h"
-#include "SocketStream.h"
-#include "truncate.h"
+#include <bv/ColorMap.h>
+#include <bv/DensityToImage.h>
+#include <bv/LinearFunction.h>
+#include <bv/PixelSet.h>
+#include <bv/SocketStream.h>
+#include <bv/truncate.h>
 
 #include <cstdint>
 #include <fstream>
@@ -26,14 +26,16 @@ public:
           m_fn_satoshi(std::log(max_satoshi), 0, std::log(min_satoshi), static_cast<double>(m_height)),
           m_fn_block(static_cast<double>(min_blockid), 0, static_cast<double>(max_blockid), static_cast<double>(m_width)),
           m_data(m_width * m_height, 0),
-          m_pixel_set(m_width * m_height),
+          m_pixel_set(m_width * m_height, 30),
           m_socket_stream(SocketStream::create("127.0.0.1", 12987)),
-          m_density_to_image(m_width, m_height, 2000, bv::ColorMap::viridis())
+          m_density_to_image(m_width, m_height, 2000, bv::ColorMap::viridis()),
+          m_current_block_height(0)
     {
     }
 
     void begin_block(uint32_t block_height)
     {
+        m_current_block_height = block_height;
     }
 
     void change(uint32_t block_height, int64_t amount)
@@ -52,39 +54,63 @@ public:
 
         // integrate density into image
         //m_density_image.update(pixel_idx, pixel);
-        m_pixel_set.insert(pixel_idx);
+        m_pixel_set.insert(m_current_block_height, pixel_idx);
     }
 
     void end_block(uint32_t block_height)
     {
-        if ((block_height % 30) == 0) {
-            // temporarily set all updated pixels to white
-            for (auto pixel_idx : m_pixel_set) {
-                m_density_to_image.set_rgb(pixel_idx, 255, 255, 255);
-            }
+        m_pixel_set.age(block_height);
 
-            m_socket_stream->write(m_density_to_image.data(), m_density_to_image.size());
-
-            // now re-update all the updated pixels that have changed since the last update
-            for (auto pixel_idx : m_pixel_set) {
-                m_density_to_image.update(pixel_idx, m_data[pixel_idx]);
-            }
-
-            //save_image_ppm(toi, fname);
-            m_pixel_set.clear();
+        for (auto const& blockheight_pixelidx : m_pixel_set) {
+            m_density_to_image.update(blockheight_pixelidx.pixel_idx, m_data[blockheight_pixelidx.pixel_idx]);
         }
+
+        if (block_height < 300000) {
+            return;
+        }
+
+        //if ((block_height % 30) == 0) {
+        // update all the updated pixels that have changed since the last update
+
+
+        // temporarily set all updated pixels to white
+        for (auto const& blockheight_pixelidx : m_pixel_set) {
+            auto rgb = m_density_to_image.rgb(blockheight_pixelidx.pixel_idx);
+
+            int const x = block_height - blockheight_pixelidx.block_height;
+
+            int k = (int)rgb[0] - 255;
+            int diff = (k * x) / static_cast<int>(m_pixel_set.max_history());
+            rgb[0] = static_cast<uint8_t>(255 + diff);
+
+            k = (int)rgb[1] - 255;
+            diff = (k * x) / static_cast<int>(m_pixel_set.max_history());
+            rgb[1] = static_cast<uint8_t>(255 + diff);
+
+            k = (int)rgb[2] - 255;
+            diff = (k * x) / static_cast<int>(m_pixel_set.max_history());
+            rgb[2] = static_cast<uint8_t>(255 + diff);
+
+            m_density_to_image.rgb(blockheight_pixelidx.pixel_idx, rgb);
+        }
+
+        //if (block_height > 400'000) {
+        m_socket_stream->write(m_density_to_image.data(), m_density_to_image.size());
+        //}
+
+        // now re-update all the updated pixels that have changed since the last update
+        for (auto const& blockheight_pixelidx : m_pixel_set) {
+            m_density_to_image.update(blockheight_pixelidx.pixel_idx, m_data[blockheight_pixelidx.pixel_idx]);
+        }
+
+        //save_image_ppm(toi, fname);
+        //m_pixel_set.clear();
+        //}
     }
 
     // saves current status of the image as a PPM file
     void save_image_ppm(bv::DensityToImage& toi, std::string filename)
     {
-        for (size_t pixel_idx = 0; pixel_idx < m_width * m_height; ++pixel_idx) {
-            toi.update(pixel_idx, m_data[pixel_idx]);
-        }
-        for (auto pixel_idx : m_pixel_set) {
-            toi.set_rgb(pixel_idx, 255, 255, 255);
-        }
-
         // see http://netpbm.sourceforge.net/doc/ppm.html
         std::ofstream fout(filename, std::ios::binary);
         fout << "P6\n"
@@ -104,6 +130,7 @@ private:
     PixelSet m_pixel_set;
     std::unique_ptr<SocketStream> m_socket_stream;
     DensityToImage m_density_to_image;
+    uint32_t m_current_block_height;
 };
 
 } // namespace bv

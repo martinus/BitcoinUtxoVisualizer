@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BufferedStreamReader.h"
+#include <bv/BufferedStreamReader.h>
 
 namespace bv {
 
