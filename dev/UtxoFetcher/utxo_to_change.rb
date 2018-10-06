@@ -26,11 +26,11 @@ if $0 == __FILE__
 	if File.exists?(utxo_filename)
 		puts "GC.start"
 		GC.start
-		puts "done"
+		puts "GC done"
 		utxo = Utxo.load(utxo_filename)
 		puts "GC.start"
 		GC.start
-		puts "done"
+		puts "GC done"
 	end
 	puts "loading/creating done!"
 

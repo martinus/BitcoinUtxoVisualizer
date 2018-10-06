@@ -145,6 +145,7 @@
     <ClInclude Include="..\..\src\bv\DensityToImage.h" />
     <ClInclude Include="..\..\src\bv\LinearFunction.h" />
     <ClInclude Include="..\..\src\bv\PixelSet.h" />
+    <ClInclude Include="..\..\src\bv\PixelSetWithHistory.h" />
     <ClInclude Include="..\..\src\bv\SocketStream.h" />
     <ClInclude Include="..\..\src\bv\truncate.h" />
     <ClInclude Include="..\..\src\catch2\catch.hpp" />

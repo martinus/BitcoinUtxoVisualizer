@@ -8,3 +8,6 @@ out/
 Debug/
 Release/
 *.vspx
+
+#visual studio code
+.vscode
