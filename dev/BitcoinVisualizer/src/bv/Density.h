@@ -66,9 +66,9 @@ public:
 
     void end_block(uint32_t block_height)
     {
-        if (block_height < 500'000) {
-            return;
-        }
+        //if (block_height < 244'000) {
+        //    return;
+        //}
 
         for (auto const pixel_idx : m_current_block_pixels) {
             m_pixel_set_with_history.insert(m_current_block_height, pixel_idx);
@@ -122,17 +122,10 @@ public:
             col[1] = (255 * 2 + rgb[1]) / 3;
             col[2] = (255 * 2 + rgb[2]) / 3;
 
-            int k = (int)rgb[0] - col[0];
-            int diff = (k * x) / static_cast<int>(m_pixel_set_with_history.max_history());
-            rgb[0] = static_cast<uint8_t>(col[0] + diff);
-
-            k = (int)rgb[1] - col[1];
-            diff = (k * x) / static_cast<int>(m_pixel_set_with_history.max_history());
-            rgb[1] = static_cast<uint8_t>(col[1] + diff);
-
-            k = (int)rgb[2] - col[2];
-            diff = (k * x) / static_cast<int>(m_pixel_set_with_history.max_history());
-            rgb[2] = static_cast<uint8_t>(col[2] + diff);
+            int const max_hist = static_cast<int>(m_pixel_set_with_history.max_history());
+            rgb[0] = static_cast<uint8_t>(col[0] + ((int)rgb[0] - col[0]) * x / max_hist);
+            rgb[1] = static_cast<uint8_t>(col[1] + ((int)rgb[1] - col[1]) * x / max_hist);
+            rgb[2] = static_cast<uint8_t>(col[2] + ((int)rgb[2] - col[2]) * x / max_hist);
 
             m_density_to_image.rgb(blockheight_pixelidx.pixel_idx, rgb);
         }
