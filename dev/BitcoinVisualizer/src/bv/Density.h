@@ -27,7 +27,7 @@ public:
           m_fn_satoshi(std::log(max_satoshi), 0, std::log(min_satoshi), static_cast<double>(m_height)),
           m_fn_block(static_cast<double>(min_blockid), 0, static_cast<double>(max_blockid), static_cast<double>(m_width)),
           m_data(m_width * m_height, 0),
-          m_pixel_set_with_history(m_width * m_height, 128),
+          m_pixel_set_with_history(m_width * m_height, 50),
           m_current_block_pixels(m_width * m_height),
           m_socket_stream(SocketStream::create("127.0.0.1", 12987)),
           m_density_to_image(m_width, m_height, 2000, bv::ColorMap::viridis()),
@@ -38,7 +38,6 @@ public:
     void begin_block(uint32_t block_height)
     {
         m_current_block_height = block_height;
-        m_current_block_pixels.clear();
     }
 
     void change(uint32_t block_height, int64_t amount)
@@ -52,33 +51,64 @@ public:
         size_t const pixel_y = truncate<size_t>(0, static_cast<size_t>(m_fn_satoshi(std::log(famount))), m_height - 1);
 
         size_t const pixel_idx = pixel_y * m_width + pixel_x;
+        static size_t max_pixel_idx = 0;
+        if (pixel_idx > max_pixel_idx) {
+            //std::cout << pixel_x << " " << pixel_y << ", " << m_width << "x" << m_height << ", idx=" << pixel_idx << std::endl;
+            max_pixel_idx = pixel_idx;
+        }
         auto& pixel = m_data[pixel_idx];
         pixel += amount >= 0 ? 1 : -1;
 
         // integrate density into image
         //m_density_image.update(pixel_idx, pixel);
-        m_pixel_set_with_history.insert(m_current_block_height, pixel_idx);
         m_current_block_pixels.insert(pixel_idx);
     }
 
     void end_block(uint32_t block_height)
     {
-        m_pixel_set_with_history.age(block_height);
-
-        for (auto pixel_idx : m_current_block_pixels) {
-            m_density_to_image.update(pixel_idx, m_data[pixel_idx]);
+        if (block_height < 500'000) {
+            return;
         }
 
-        //if (block_height < 450000) {
-        //    return;
-        //}
+        for (auto const pixel_idx : m_current_block_pixels) {
+            m_pixel_set_with_history.insert(m_current_block_height, pixel_idx);
+            m_density_to_image.update(pixel_idx, m_data[pixel_idx]);
 
-        //if (block_height % 8 != 0) {
-        //    return;
-        //}
+            size_t const y = pixel_idx / m_width;
+            size_t const x = pixel_idx - y * m_width;
 
-        //if ((block_height % 30) == 0) {
-        // update all the updated pixels that have changed since the last update
+            // upper row
+            if (x > 0) {
+                if (y > 0) {
+                    m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * m_width + (x - 1));
+                }
+                m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * m_width + (x - 1));
+                if (y + 1 < m_height) {
+                    m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * m_width + (x - 1));
+                }
+            }
+
+            // middle row
+            if (y > 0) {
+                m_pixel_set_with_history.insert(m_current_block_height - 7, (y - 1) * m_width + (x + 0));
+            }
+            // m_pixel_set_with_history.insert(m_current_block_height, (y + 0) * m_width + (x + 0));
+            if (y + 1 < m_height) {
+                m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 1) * m_width + (x + 0));
+            }
+
+            // lower row
+            if (x + 1 < m_width) {
+                if (y > 0) {
+                    m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * m_width + (x + 1));
+                }
+                m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * m_width + (x + 1));
+                if (y + 1 < m_height) {
+                    m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * m_width + (x + 1));
+                }
+            }
+        }
+        m_pixel_set_with_history.age(block_height);
 
 
         // temporarily set all updated pixels to white
@@ -88,9 +118,9 @@ public:
 
             // use the inverted color as the basis
             uint8_t col[3];
-            col[0] = (255 + rgb[0]) / 2;
-            col[1] = (255 + rgb[1]) / 2;
-            col[2] = (255 + rgb[2]) / 2;
+            col[0] = (255 * 2 + rgb[0]) / 3;
+            col[1] = (255 * 2 + rgb[1]) / 3;
+            col[2] = (255 * 2 + rgb[2]) / 3;
 
             int k = (int)rgb[0] - col[0];
             int diff = (k * x) / static_cast<int>(m_pixel_set_with_history.max_history());
@@ -119,6 +149,8 @@ public:
         //save_image_ppm(toi, fname);
         //m_pixel_set.clear();
         //}
+
+        m_current_block_pixels.clear();
     }
 
     // saves current status of the image as a PPM file

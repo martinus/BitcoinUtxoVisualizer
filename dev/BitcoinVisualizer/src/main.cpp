@@ -56,10 +56,10 @@ int main(int argc, char** argv)
 
 
     size_t const density_per_pixel = static_cast<size_t>(1000) * 3840 * 2160;
-    size_t const width = 3840;
-    size_t const height = 2160;
-    //size_t const width = 2560;
-    //size_t const height = 1440;
+    //size_t const width = 3840;
+    //size_t const height = 2160;
+    size_t const width = 2560;
+    size_t const height = 1440;
     size_t const max_included_density = 1000;
 
     uint32_t const stream_every_x_block = std::numeric_limits<uint32_t>::max();

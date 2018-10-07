@@ -37,8 +37,11 @@ public:
             m_pixel[pixel_idx] = m_blockheight_pixelidx.size();
             m_blockheight_pixelidx.emplace_back(block_height, pixel_idx);
         } else {
-            // pixel already set: update it
-            m_blockheight_pixelidx[m_pixel[pixel_idx]].block_height = block_height;
+            // pixel already set: update it with the max
+            auto& pos = m_blockheight_pixelidx[m_pixel[pixel_idx]];
+            if (block_height > pos.block_height) {
+                pos.block_height = block_height;
+            }
         }
     }
 
