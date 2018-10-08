@@ -40,7 +40,7 @@ public:
         m_current_block_height = block_height;
     }
 
-    void change(uint32_t block_height, int64_t amount)
+    void change(uint32_t block_height, int64_t amount, bool is_same_as_previous_change)
     {
         size_t pixel_x = static_cast<size_t>(m_fn_block(block_height));
         if (pixel_x > m_width - 1) {
@@ -66,9 +66,13 @@ public:
 
     void end_block(uint32_t block_height)
     {
-        //if (block_height < 244'000) {
+        //if (block_height < 300'000) {
         //    return;
         //}
+
+        if (block_height >= 200'000) {
+            exit(0);
+        }
 
         for (auto const pixel_idx : m_current_block_pixels) {
             m_pixel_set_with_history.insert(m_current_block_height, pixel_idx);
@@ -77,34 +81,37 @@ public:
             size_t const y = pixel_idx / m_width;
             size_t const x = pixel_idx - y * m_width;
 
-            // upper row
-            if (x > 0) {
-                if (y > 0) {
-                    m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * m_width + (x - 1));
+			// make sure we don't get an overflow!
+            if (m_current_block_height >= 15) {
+                // upper row
+                if (x > 0) {
+                    if (y > 0) {
+                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * m_width + (x - 1));
+                    }
+                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * m_width + (x - 1));
+                    if (y + 1 < m_height) {
+                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * m_width + (x - 1));
+                    }
                 }
-                m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * m_width + (x - 1));
-                if (y + 1 < m_height) {
-                    m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * m_width + (x - 1));
-                }
-            }
 
-            // middle row
-            if (y > 0) {
-                m_pixel_set_with_history.insert(m_current_block_height - 7, (y - 1) * m_width + (x + 0));
-            }
-            // m_pixel_set_with_history.insert(m_current_block_height, (y + 0) * m_width + (x + 0));
-            if (y + 1 < m_height) {
-                m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 1) * m_width + (x + 0));
-            }
-
-            // lower row
-            if (x + 1 < m_width) {
+                // middle row
                 if (y > 0) {
-                    m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * m_width + (x + 1));
+                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y - 1) * m_width + (x + 0));
                 }
-                m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * m_width + (x + 1));
+                // m_pixel_set_with_history.insert(m_current_block_height, (y + 0) * m_width + (x + 0));
                 if (y + 1 < m_height) {
-                    m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * m_width + (x + 1));
+                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 1) * m_width + (x + 0));
+                }
+
+                // lower row
+                if (x + 1 < m_width) {
+                    if (y > 0) {
+                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * m_width + (x + 1));
+                    }
+                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * m_width + (x + 1));
+                    if (y + 1 < m_height) {
+                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * m_width + (x + 1));
+                    }
                 }
             }
         }
