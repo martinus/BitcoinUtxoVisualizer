@@ -5,7 +5,7 @@
 
 namespace bv {
 
-// abstract class so we can hide all the naughty windows stuff in the .cpp file.
+// abstract class so we can hide all the nasty OS specific stuff in the .cpp file.
 class SocketStream
 {
 public:

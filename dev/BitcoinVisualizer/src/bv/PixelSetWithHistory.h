@@ -76,6 +76,11 @@ public:
         return m_blockheight_pixelidx.end();
     }
 
+    size_t size() const
+    {
+        return m_blockheight_pixelidx.size();
+    }
+
     void clear()
     {
         std::fill(m_pixel.begin(), m_pixel.end(), sentinel);

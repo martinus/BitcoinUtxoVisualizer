@@ -47,7 +47,7 @@ public:
             // read first dataset: not varint encoded
             bsr.read(amount);
             bsr.read(amount_block_height);
-            callback.change(amount_block_height, amount);
+            callback.change(amount_block_height, amount, false);
 
             size_t bytes_read = sizeof(amount) + sizeof(amount_block_height);
 
@@ -59,7 +59,8 @@ public:
                 int32_t block_height_diff;
                 bytes_read += decode_int32(bsr, block_height_diff);
                 amount_block_height += block_height_diff;
-                callback.change(amount_block_height, amount);
+                callback.change(amount_block_height, amount, amount_diff == 0 && block_height_diff == 0);
+                //callback.change(amount_block_height, amount, false);
             }
 
             callback.end_block(current_block_height);

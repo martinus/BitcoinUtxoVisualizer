@@ -1,7 +1,9 @@
 #pragma once
 
+#include <array>
 #include <exception>
 #include <initializer_list>
+#include <vector>
 
 namespace bv {
 
@@ -10,6 +12,7 @@ class ColorMap
 {
 public:
     ColorMap(std::initializer_list<double> rgb_colors)
+        : m_rgb(rgb_colors.size())
     {
         if (rgb_colors.size() != m_rgb.size()) {
             throw std::runtime_error("ColorMap: needs 3*256 double values");
@@ -23,6 +26,11 @@ public:
             }
             m_rgb[i] = static_cast<uint8_t>(256 * *it++);
         }
+    }
+
+    uint8_t const* rgb(int value) const
+    {
+        return m_rgb.data() + (value * 3);
     }
 
     void write_rgb(int value, uint8_t* target) const
@@ -821,7 +829,8 @@ public:
     }
 
 private:
-    std::array<uint8_t, 3 * 256> m_rgb;
+    //std::array<uint8_t, 3 * 256> m_rgb;
+    std::vector<uint8_t> m_rgb;
 };
 
 } // namespace bv
