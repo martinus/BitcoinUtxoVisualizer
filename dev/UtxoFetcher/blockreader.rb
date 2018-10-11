@@ -8,7 +8,7 @@ class BlockReader
 		@uri = uri
 	end
 	
-	def read(what)	
+	def read(what)
 		begin
 			# see https://jhawthorn.github.io/curl-to-ruby/
 			uri = URI.parse(@uri + '/rest/' + what + '.json')
