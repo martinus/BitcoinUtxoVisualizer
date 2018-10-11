@@ -25,9 +25,9 @@ public:
         WSACleanup();
     }
 
-    void write(char const* data, size_t size) override
+    void write(uint8_t const* data, size_t size) override
     {
-        send(m_socket, data, static_cast<int>(size), 0);
+        send(m_socket, reinterpret_cast<char const*>(data), static_cast<int>(size), 0);
     }
 
 private:

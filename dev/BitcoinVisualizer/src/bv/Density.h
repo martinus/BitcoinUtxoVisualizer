@@ -59,7 +59,6 @@ public:
         size_t const pixel_idx = pixel_y * m_width + pixel_x;
         static size_t max_pixel_idx = 0;
         if (pixel_idx > max_pixel_idx) {
-            //std::cout << pixel_x << " " << pixel_y << ", " << m_width << "x" << m_height << ", idx=" << pixel_idx << std::endl;
             max_pixel_idx = pixel_idx;
         }
         m_last_data = &m_data[pixel_idx];
@@ -72,12 +71,12 @@ public:
 
     void end_block(uint32_t block_height)
     {
-        if (block_height < 540'000) {
-            return;
-        }
-        //if (block_height >= 200'000) {
-        //    exit(0);
+        //if (block_height < 200'000) {
+        //    return;
         //}
+        if (block_height >= 200'000) {
+            exit(0);
+        }
 
         for (auto const pixel_idx : m_current_block_pixels) {
             m_density_to_image.update(pixel_idx, m_data[pixel_idx]);
@@ -88,19 +87,20 @@ public:
             size_t const x = pixel_idx - y * m_width;
 
             // make sure we don't get an overflow!
+            /*
             if (m_current_block_height >= 15 && x > 0 && x + 1 < m_width && y > 0 && y + 1 < m_height) {
                 m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx - m_width - 1);
                 m_pixel_set_with_history.insert(m_current_block_height - 07, pixel_idx - m_width);
                 m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx - m_width + 1);
                 m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx - 1);
-                m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx);
+                m_pixel_set_with_history.insert(m_current_block_height -  0, pixel_idx);
                 m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx + 1);
                 m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx + m_width - 1);
                 m_pixel_set_with_history.insert(m_current_block_height - 07, pixel_idx + m_width);
                 m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx + m_width + 1);
             }
+			*/
 
-            /*
             if (m_current_block_height >= 15) {
                 // upper row
                 if (x > 0) {
@@ -117,7 +117,7 @@ public:
                 if (y > 0) {
                     m_pixel_set_with_history.insert(m_current_block_height - 7, (y - 1) * m_width + (x + 0));
                 }
-                // m_pixel_set_with_history.insert(m_current_block_height, (y + 0) * m_width + (x + 0));
+                m_pixel_set_with_history.insert(m_current_block_height, pixel_idx);
                 if (y + 1 < m_height) {
                     m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 1) * m_width + (x + 0));
                 }
@@ -133,49 +133,29 @@ public:
                     }
                 }
             }
-			*/
         }
         m_pixel_set_with_history.age(block_height);
 
 
         // temporarily set all updated pixels to white
         std::vector<uint8_t> previous_rgb_values(3 * m_pixel_set_with_history.size());
-        auto rgb_data = previous_rgb_values.data();
+        auto previous_rgb_data = previous_rgb_values.data();
 
+        int const max_hist = static_cast<int>(m_pixel_set_with_history.max_history());
         for (auto const& blockheight_pixelidx : m_pixel_set_with_history) {
-            auto rgb = m_density_to_image.rgb(blockheight_pixelidx.pixel_idx);
-
-            rgb_data[0] = rgb[0];
-            rgb_data[1] = rgb[1];
-            rgb_data[2] = rgb[2];
-            rgb_data += 3;
             int const x = block_height - blockheight_pixelidx.block_height;
 
-            // use the inverted color as the basis
-            /*
-            int const r = (255 * 2 + rgb[0]) / 3;
-            int const g = (255 * 2 + rgb[1]) / 3;
-            int const b = (255 * 2 + rgb[2]) / 3;
-			*/
-            int const max_hist = static_cast<int>(m_pixel_set_with_history.max_history());
-            //rgb[0] = (rgb[0] * x + r * (max_hist - x)) / max_hist;
             int const fact = (2 * x + max_hist) / 3;
-            int const opposite = 255 * 2 * (max_hist - x) / 3;
-            //rgb[0] = (rgb[0] * x + 510 * opposite + rgb[0] * opposite) / max_hist;
+            int const opposite = (max_hist - x) / 170; // 255 * 2 / 3 = 170
+
+            auto rgb = m_density_to_image.rgb(blockheight_pixelidx.pixel_idx);
+            *previous_rgb_data++ = rgb[0];
+            *previous_rgb_data++ = rgb[1];
+            *previous_rgb_data++ = rgb[2];
 
             rgb[0] = (rgb[0] * fact + opposite) / max_hist;
             rgb[1] = (rgb[1] * fact + opposite) / max_hist;
             rgb[2] = (rgb[2] * fact + opposite) / max_hist;
-            /*
-            rgb[0] = (rgb[0] * x + (255 * 2 + rgb[0]) * opposite) / max_hist;
-            rgb[1] = (rgb[1] * x + (255 * 2 + rgb[1]) * opposite) / max_hist;
-            rgb[2] = (rgb[2] * x + (255 * 2 + rgb[2]) * opposite) / max_hist;
-			*/
-            //rgb[0] = static_cast<uint8_t>(r + (rgb[0] - r) * x / max_hist);
-            //rgb[1] = static_cast<uint8_t>(g + (rgb[1] - g) * x / max_hist);
-            //rgb[2] = static_cast<uint8_t>(b + (rgb[2] - b) * x / max_hist);
-
-            //m_density_to_image.rgb(blockheight_pixelidx.pixel_idx, rgb);
         }
 
         //if (block_height > 400'000) {
@@ -183,10 +163,10 @@ public:
         //}
 
         // now re-update all the updated pixels that have changed since the last update
-        rgb_data = previous_rgb_values.data();
+        previous_rgb_data = previous_rgb_values.data();
         for (auto const& blockheight_pixelidx : m_pixel_set_with_history) {
-            m_density_to_image.rgb(blockheight_pixelidx.pixel_idx, rgb_data);
-            rgb_data += 3;
+            m_density_to_image.rgb(blockheight_pixelidx.pixel_idx, previous_rgb_data);
+            previous_rgb_data += 3;
         }
 
         //save_image_ppm(toi, fname);

@@ -27,23 +27,19 @@ public:
 
     void update(size_t pixel_idx, size_t density)
     {
+        static uint8_t black[3] = {0, 0, 0};
+        uint8_t const* rgb_source = nullptr;
         if (0 == density) {
-            m_rgb[pixel_idx * 3] = 0;
-            m_rgb[pixel_idx * 3 + 1] = 0;
-            m_rgb[pixel_idx * 3 + 2] = 0;
+            rgb_source = black;
         } else if (density >= m_max_included_value) {
-            m_colormap.write_rgb(255, &m_rgb[pixel_idx * 3]);
+            rgb_source = m_colormap.rgb(255);
         } else {
             auto log = std::log(density);
             log *= m_fact;
             auto log_int = static_cast<int>(log);
-            uint8_t const* rgb = m_colormap.rgb(log_int);
-            std::copy(rgb, rgb + 3, m_rgb.data() + pixel_idx * 3);
-            //std::memcpy(m_rgb.data() + pixel_idx * 3, rgb, 3);
-            //m_rgb[pixel_idx * 3] = rgb[0];
-            //m_rgb[pixel_idx * 3+1] = rgb[1];
-            //m_rgb[pixel_idx * 3+2] = rgb[2];
+            rgb_source = m_colormap.rgb(log_int);
         }
+        rgb(pixel_idx, rgb_source);
     }
 
     void rgb(size_t pixel_idx, uint8_t const* rgb_data)
@@ -58,9 +54,9 @@ public:
         return m_rgb.data() + (pixel_idx * 3);
     }
 
-    char const* data() const
+    uint8_t const* data() const
     {
-        return reinterpret_cast<char const*>(m_rgb.data());
+        return m_rgb.data();
     }
 
     // size in bytes

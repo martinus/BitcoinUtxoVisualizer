@@ -7,7 +7,7 @@
 
 namespace bv {
 
-// Maps an uint8_t to a color.
+// Maps an uint8_t to a colormap.
 class ColorMap
 {
 public:
@@ -28,9 +28,9 @@ public:
         }
     }
 
-    uint8_t const* rgb(int value) const
+    uint8_t const* rgb(int idx) const
     {
-        return m_rgb.data() + (value * 3);
+        return m_rgb.data() + (idx * 3);
     }
 
     void write_rgb(int value, uint8_t* target) const

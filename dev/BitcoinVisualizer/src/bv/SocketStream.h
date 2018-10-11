@@ -9,7 +9,7 @@ namespace bv {
 class SocketStream
 {
 public:
-    virtual void write(const char* data, size_t size) = 0;
+    virtual void write(uint8_t const* data, size_t size) = 0;
     virtual ~SocketStream() = default;
 
     // factory

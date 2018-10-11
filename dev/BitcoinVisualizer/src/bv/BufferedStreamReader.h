@@ -5,6 +5,7 @@
 
 namespace bv {
 
+// Buffering wrapper to std::ifstream.
 // Reading byte by byte from an std::ifstream is incredibly slow, as each call to read() has
 // virtual call overheads. Using this class as a wrapper speeds up the parsing more than 10x
 template <size_t BufferSize = 32 * 1024>
