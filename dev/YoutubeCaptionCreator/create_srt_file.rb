@@ -1,3 +1,7 @@
+require "./DateToBlock.rb"
+
+require "json"
+require "time"
 require "pp"
 
 =begin
@@ -24,15 +28,29 @@ our famous chocolate chip cookies!
 Okay, so we have all the ingredients laid out here
 =end
 
-# parse block dates
-dates = []
-File.open("../../out/headers.tsv", "rt") do |f|
-    f.each_line do |l|
-        l = l.split
-        height = l[1].to_i
-        mediantime = Time.at(l[3].to_i)
-        dates[height] = mediantime
+
+dtb = DateToBlock.load("../../out/headers.tsv")
+
+# load all data from input directory
+events = []
+Dir["input/**/*.json"].each do |f|
+    JSON.parse(File.read(f))["events"].each do |e|
+        timestamp = Time.parse(e["date"]).to_i
+        event = e["event"]
+
+        events << [timestamp, event]
     end
 end
-pp dates
 
+events.sort!
+events.each do |date, event|
+    height, before, after = dtb.date_to_block(date)
+    next unless before
+
+    puts "block #{height}, #{Time.at(before)}: #{event}"
+end
+
+t = Time.parse("10th August 2013").to_i
+
+result = dtb.date_to_block(t)
+puts "search date: #{t}"
