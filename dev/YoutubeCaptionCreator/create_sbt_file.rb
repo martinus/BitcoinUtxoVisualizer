@@ -4,30 +4,25 @@ require "json"
 require "time"
 require "pp"
 
+# from from https://support.google.com/youtube/answer/2734698?hl=en&ref_topic=3014331
+
 =begin
-from https://support.google.com/youtube/answer/2734698?hl=en&ref_topic=3014331
-1
-00:00:00,599 --> 00:00:04,160
+0:00:00.599,0:00:04.160
 >> ALICE: Hi, my name is Alice Miller and this is John Brown
 
-2
-00:00:04,160 --> 00:00:06,770
+0:00:04.160,0:00:06.770
 >> JOHN: and we're the owners of Miller Bakery.
 
-3
-00:00:06,770 --> 00:00:10,880
+0:00:06.770,0:00:10.880
 >> ALICE: Today we'll be teaching you how to make
 our famous chocolate chip cookies!
 
-4
-00:00:10,880 --> 00:00:16,700
+0:00:10.880,0:00:16.700
 [intro music]
 
-5
-00:00:16,700 --> 00:00:21,480
-Okay, so we have all the ingredients laid out here
+0:00:16.700,0:00:21.480
+Okay, so we have all the ingredients laid out here=end
 =end
-
 
 dtb = DateToBlock.load("../../out/headers.tsv")
 
@@ -42,15 +37,26 @@ Dir["input/**/*.json"].each do |f|
     end
 end
 
+# e.g. 10.88 -> 0:00:10.880
+def sbv_time(t)
+    i = t.to_i
+    "%d:%02d:%02d.%03d" % [i/3600, i/60%60, i%60, (t*1000).to_i%1000]
+end
+
 events.sort!
+
+visible_duration = 20.0
+sbv_num = 0
 events.each do |date, event|
     height, before, after = dtb.date_to_block(date)
     next unless before
 
-    puts "block #{height}, #{Time.at(before)}: #{event}"
+    sbv_num += 1
+    t = height / 60.0
+
+    puts "#{sbv_time(t)},#{sbv_time(t + visible_duration)}"
+    puts "#{Time.at(before).strftime("%b %-d, %Y")}: #{event}"
+    puts
 end
 
-t = Time.parse("10th August 2013").to_i
-
-result = dtb.date_to_block(t)
-puts "search date: #{t}"
+STDERR.puts "#{events.size} events created"
