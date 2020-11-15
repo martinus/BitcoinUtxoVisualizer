@@ -16,6 +16,8 @@ if $0 == __FILE__
 	base_url = 'http://127.0.0.1:8332'
 
 	dir = "../../out/blocks/"
+	FileUtils.mkdir_p(dir)
+	
 	filename_pattern = "#{dir}%08d.blk"
 	
 	interval_save_seconds = 60*60
