@@ -1,3 +1,5 @@
+#include "app/Utxo.h"
+
 #include <doctest.h>
 #include <fmt/format.h>
 
@@ -11,4 +13,6 @@ TEST_CASE("utxo_to_change") {
     std::filesystem::create_directories(dataDir);
 
     fmt::print("created {}, accessing bitcoin at {}\n", dataDir, bitcoinRpcUrl);
+
+    
 }

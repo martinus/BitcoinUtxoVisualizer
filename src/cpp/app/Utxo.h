@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring> // std::memcpy
+#include <filesystem>
 
 namespace buv {
 
@@ -34,7 +35,11 @@ public:
     }
 };
 
-using Utxo = robin_hood::unordered_flat_map<TxId, robin_hood::unordered_flat_map<VOutNr, Satoshi>>;
+using UtxoPerTx = robin_hood::unordered_flat_map<VOutNr, Satoshi>;
+using Utxo = robin_hood::unordered_flat_map<TxId, UtxoPerTx>;
+
+auto loadUtxo(std::filesystem::path const& utxoFilename) -> Utxo;
+void safeUtxo(Utxo const& utxo);
 
 } // namespace buv
 
