@@ -1,0 +1,3 @@
+[submodule "src/third_party/doctest"]
+	path = src/third_party/doctest
+	url = https://github.com/onqtam/doctest.git
