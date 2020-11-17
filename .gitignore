@@ -1,6 +1,7 @@
 .vscode
 .clangd
 src/third_party
+build/
 
 **/perf.data
 **/perf.data.old
