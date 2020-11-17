@@ -1,13 +1,43 @@
-out/
-3rdparty/
-
-# visual studio
-*.vcxproj.filters
-*.vcxproj.user
-.vs/
-Debug/
-Release/
-*.vspx
-
-#visual studio code
 .vscode
+.clangd
+src/third_party
+
+**/perf.data
+**/perf.data.old
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+
+# generated blobs
+*.lgr

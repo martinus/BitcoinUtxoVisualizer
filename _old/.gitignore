@@ -1,0 +1,13 @@
+out/
+3rdparty/
+
+# visual studio
+*.vcxproj.filters
+*.vcxproj.user
+.vs/
+Debug/
+Release/
+*.vspx
+
+#visual studio code
+.vscode
