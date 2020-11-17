@@ -2,6 +2,7 @@
 .clangd
 src/third_party
 build/
+out/
 
 **/perf.data
 **/perf.data.old
