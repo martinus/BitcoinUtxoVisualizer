@@ -7,4 +7,5 @@ target_sources_local(${PROJECT_NAME}
         app/FetchBlocks.cpp
         util/doctest.cpp
         util/nanobench.cpp
+        unit/Utxo.cpp
 )
