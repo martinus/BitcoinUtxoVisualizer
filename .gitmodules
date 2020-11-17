@@ -1,3 +1,15 @@
 [submodule "src/third_party/doctest"]
 	path = src/third_party/doctest
 	url = https://github.com/onqtam/doctest.git
+[submodule "src/third_party/simdjson"]
+	path = src/third_party/simdjson
+	url = https://github.com/simdjson/simdjson.git
+[submodule "src/third_party/nanobench"]
+	path = src/third_party/nanobench
+	url = https://github.com/martinus/nanobench.git
+[submodule "src/third_party/fmt"]
+	path = src/third_party/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "src/third_party/robin-hood-hashing"]
+	path = src/third_party/robin-hood-hashing
+	url = https://github.com/martinus/robin-hood-hashing.git
