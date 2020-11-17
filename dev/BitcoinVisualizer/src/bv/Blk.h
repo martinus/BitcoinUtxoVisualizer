@@ -5,7 +5,20 @@
 namespace bv {
 
 // Decodes a .blk file, and calls the given callbacks for each event.
-// Returns false if a parsing error is detected.
+//
+// BLK is designed to be compact, fast to parse, and contain all (amounts, blockheight) tuples of the current block.
+// a .blk file contains concatenated entries of that payload:
+//
+// field size | description  | data type | commment
+// -----------|--------------|-----------|---
+//          4 | marker       | string    | magic marker "BLK\0". uint32_t with value 0x004b4c42. Always exactly the same.
+//          4 | block height | uint32_t  | current block height, successively increasing value
+//          4 | num_bytes    | uint32_t  | size in bytes of the data blob for this blob. Add num_bytes to skip to the next block, then you will point to the marker "BLK\0" of the next block. This is useful to quickly skip to the next block without parsing the data.
+//          8 | amount       | int64_t   | Amount in satishi of the first transaction (transaction with the lowest amount)
+//          4 | amount_block | uint32_t  | Block height of the first amount
+//  The following fields are repeated until the end of the block (num_bytes - (8 + 4) bytes). Sorted by amount.
+//         1+ | amount_diff  | var_uint  | var-uint encoded difference to previous amount. Guaranteed to be positive due to the sorting.
+//         1+ | block_diff   | var_int   | var-int (zig-zag encoding) of block difference to previous entry.
 class Blk
 {
 public:
