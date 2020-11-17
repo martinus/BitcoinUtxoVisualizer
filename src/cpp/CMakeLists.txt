@@ -5,4 +5,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_sources_local(${PROJECT_NAME}
     PRIVATE
         app/FetchBlocks.cpp
+        util/doctest.cpp
+        util/nanobench.cpp
 )
