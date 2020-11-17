@@ -2,6 +2,19 @@ require "./blockreader.rb"
 require 'pp'
 require 'date'
 
+# Stores the current Utxo data set. Data structure
+#   txid: 16byte prefix (truncated to 128bit, which should be enough to prevent collisions)
+#   data: [block_height, (voutnr_0, amount_0), (voutnr_1, amount_1), ..., (voutnr_n, amount_n)]
+#         blockheight, and all the vout values still present in the blockchain. Will be removed by vin's.
+#   utxo: unordered_map<txid, data>
+#
+# So basically we need a map from txid to a map of voutnr to amount. Memory is an issue, so make it very compact:
+#   using TxId = std::array<uint8_t, 16>;  // 128 bit should be enough to prevent any collisions
+#   using VOutNr = uint16_t;               // maximum 65k outputs is enough (record is ~13k)
+#   using Satoshi = std::array<uint8_t, 8> // use array so we have no padding. Must use std::memcpy.
+# 
+#   std::unordered_flat_map<Txid, std::unordered_flat_map<VOutNr, Satoshi>>
+#      // flat_maps should be fine, but maybe experiment with different maps
 class Utxo
 	attr_reader :nextblockhash, :height, :hash, :time
 	
