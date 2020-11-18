@@ -11,8 +11,6 @@ TEST_CASE("parse_block") {
 
     auto cli = util::HttpClient::create(bitcoinRpcUrl);
 
-    for (;;) {
-        auto body = cli->get("/rest/block/{}.json", blockId);
-        fmt::print("{}\n", body.size());
-    }
+    auto body = cli->get("/rest/block/{}.json", blockId);
+    fmt::print("{}\n", body.size());
 }
