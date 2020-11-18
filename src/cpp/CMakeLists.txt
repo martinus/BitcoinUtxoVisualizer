@@ -8,7 +8,7 @@ target_sources_local(${PROJECT_NAME}
         app/utxo_to_change.cpp
         app/Utxo.cpp
         unit/Utxo.cpp
-        util/BlockReader.cpp
+        util/HttpClient.cpp
         util/doctest.cpp
         util/Mmap.cpp
         util/nanobench.cpp
