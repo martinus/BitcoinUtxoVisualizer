@@ -3,6 +3,7 @@ Checks: "*,\
   -cert-dcl21-cpp,\
   -cert-err58-cpp,\
   -cppcoreguidelines-avoid-magic-numbers,\
+  -cppcoreguidelines-avoid-non-const-global-variables,\
   -cppcoreguidelines-owning-memory,\
   -cppcoreguidelines-pro-bounds-constant-array-index,\
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,\
@@ -13,6 +14,7 @@ Checks: "*,\
   -google-build-using-namespace,\
   -google-runtime-int,\
   -google-runtime-references,\
+  -llvmlibc-callee-namespace,\
   -readability-magic-numbers,\
   "
 ...
