@@ -12,6 +12,7 @@ target_sources_local(${PROJECT_NAME}
         unit/UtxoTest.cpp
         unit/VarIntTest.cpp
         util/doctest.cpp
+        util/hex.cpp
         util/HttpClient.cpp
         util/Mmap.cpp
         util/nanobench.cpp

@@ -1,24 +1,24 @@
 #pragma once
 
-#include <filesystem>
-#include <fstream>
+#include <cstdint>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace buv {
 
-// Serializes change data
+// Serializes a block into a string
 class BlockSerializer {
-    std::ofstream mOut{};
-    uint32_t mCurrentBlockHeight{};
     std::vector<std::pair<uint64_t, uint32_t>> mSatoshiAndBlockheight{};
-    std::string mTmp{};
+    uint32_t mBlockHeight = 0;
 
 public:
-    explicit BlockSerializer(std::filesystem::path const& filename);
-
     void beginBlock(uint32_t blockHeight);
-    void add(uint32_t blockHeight, uint64_t amountSatoshi);
+    void addSpentOutput(uint32_t blockHeight, uint64_t amountSatoshi);
     void finishBlock();
+
+    // serializes everything into data. Non-const so we can sort mSatoshiAndBlockheight
+    void serialize(std::string& data) const;
 };
 
 } // namespace buv

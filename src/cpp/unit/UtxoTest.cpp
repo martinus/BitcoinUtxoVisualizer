@@ -20,3 +20,4 @@ TEST_CASE("utxo") {
     fmt::print("{} B std::unordered_map<buv::VOutNr, buv::Satoshi>\n", sizeof(std::unordered_map<buv::VOutNr, buv::Satoshi>));
 #endif
 }
+

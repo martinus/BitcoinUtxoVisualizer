@@ -7,46 +7,52 @@
 
 namespace buv {
 
-BlockSerializer::BlockSerializer(std::filesystem::path const& filename)
-    : mOut(filename, std::ios::binary) {
-    if (!mOut.is_open()) {
-        throw std::runtime_error("could not open file");
-    }
-}
-
 void BlockSerializer::beginBlock(uint32_t blockHeight) {
-    mCurrentBlockHeight = blockHeight;
-}
-
-void BlockSerializer::add(uint32_t blockHeight, uint64_t amountSatoshi) {
-    mSatoshiAndBlockheight.emplace_back(amountSatoshi, blockHeight);
+    mBlockHeight = blockHeight;
+    mSatoshiAndBlockheight.clear();
 }
 
 void BlockSerializer::finishBlock() {
     std::sort(mSatoshiAndBlockheight.begin(), mSatoshiAndBlockheight.end());
+}
 
-    // first serialize everything into mTmp, so we know exactly how many bytes the block has
+void BlockSerializer::addSpentOutput(uint32_t blockHeight, uint64_t amountSatoshi) {
+    mSatoshiAndBlockheight.emplace_back(amountSatoshi, blockHeight);
+}
+
+void BlockSerializer::serialize(std::string& data) const {
+    data.clear();
+
+    data += std::string_view("BLK0");
+    data.append(reinterpret_cast<char const*>(&mBlockHeight), sizeof(mBlockHeight));
+
+    // skip 4 bytes, which will later contain the size of the remaining payload. This can be used to quickly skip to the next
+    // block.
+    data.append(4, '\0');
+
+    // now comes the data in mSatoshiAndBlockheight. Sorted by satoshi, so the satoshi's only go up.
+    // We only store the difference to the previous satoshi amount, encoded as unsigned varint. Thus,
+    // the amounts will be stored quite compact. Only thing better would be golomb coded sets
+    // https://en.wikipedia.org/wiki/Golomb_coding
+    //
+    // We also store diffs of block size, but they will be encoded as signed integers, because they can be quite random.
+    // already sorted in finishBlock()
+
     auto prevSatoshi = uint64_t();
     auto prevBlockheight = int64_t();
     auto varInt = util::VarInt();
     for (auto const& [satoshi, blockheight] : mSatoshiAndBlockheight) {
-        mTmp += varInt.encode(satoshi - prevSatoshi); // guaranteed to not have an overflow
-        mTmp += varInt.encode(static_cast<int64_t>(blockheight) - prevBlockheight);
+        data += varInt.encode<uint64_t>(satoshi - prevSatoshi);
+        data += varInt.encode<int64_t>(static_cast<int64_t>(blockheight) - prevBlockheight);
 
         prevSatoshi = satoshi;
         prevBlockheight = blockheight;
     }
 
-    // now dump everything
-    auto bsw = util::BinaryStreamWriter(&mOut);
-    bsw.write<4>("BLK\0");
-    bsw.write<4>(mCurrentBlockHeight);
-    bsw.write<4>(static_cast<uint32_t>(mTmp.size()));
-    mOut.write(mTmp.data(), mTmp.size());
-
-    mCurrentBlockHeight = 0;
-    mSatoshiAndBlockheight.clear();
-    mTmp.clear();
+    // finally, fill in the payload size
+    // "BLK0" + blockheight + payloadSize
+    auto payloadSize = static_cast<uint32_t>(data.size() - (4U + 4U + 4U));
+    std::memcpy(data.data() + (4U + 4U), &payloadSize, 4U);
 }
 
 } // namespace buv

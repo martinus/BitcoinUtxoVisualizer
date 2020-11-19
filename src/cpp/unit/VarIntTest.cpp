@@ -1,37 +1,8 @@
 #include <util/VarInt.h>
+#include <util/hex.h>
 
 #include <doctest.h>
 #include <fmt/format.h>
-
-struct Hex {
-    std::string_view value{};
-};
-
-template <>
-struct fmt::formatter<Hex> {
-    static constexpr auto parse(format_parse_context& ctx) {
-        const auto* it = ctx.begin();
-        if (it != ctx.end() && *it != '}') {
-            throw format_error("invalid format");
-        }
-        return it;
-    }
-
-    template <typename FormatContext>
-    auto format(Hex const& hex, FormatContext& ctx) {
-        auto out = ctx.out();
-        for (char c : hex.value) {
-            static constexpr auto ary = "0123456789abcdef";
-            auto byte = static_cast<uint8_t>(c);
-            format_to(out, "{}{}", ary[byte >> 4U], ary[byte & 0b1111U]);
-        }
-        return out;
-    }
-};
-
-auto hex(std::string_view input) -> std::string {
-    return fmt::format("{}", Hex{input});
-}
 
 template <typename T>
 void testEncDec(T val) {
@@ -43,6 +14,8 @@ void testEncDec(T val) {
 }
 
 TEST_CASE("varint") {
+    using util::hex;
+
     auto varint = util::VarInt();
     REQUIRE(hex(varint.encode(0)) == "00");
     REQUIRE(hex(varint.encode(-1)) == "01");
