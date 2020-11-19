@@ -8,7 +8,7 @@
 namespace buv {
 
 // Serializes a block into a string
-class BlockSerializer {
+class BlockEncoder {
     std::vector<std::pair<uint64_t, uint32_t>> mSatoshiAndBlockheight{};
     uint32_t mBlockHeight = 0;
 
@@ -18,7 +18,7 @@ public:
     void endBlock();
 
     // serializes everything into data. Non-const so we can sort mSatoshiAndBlockheight
-    void serialize(std::string& data) const;
+    void encode(std::string& data) const;
 };
 
 } // namespace buv

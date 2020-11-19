@@ -4,12 +4,12 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_sources_local(${PROJECT_NAME}
     PRIVATE
-        app/BlockSerializer.cpp
+        app/BlockEncoder.cpp
         app/load_all_block_headers.cpp
         app/parse_block.cpp
         app/utxo_to_change.cpp
         app/Utxo.cpp
-        unit/BlockSerializerTest.cpp
+        unit/BlockEncoderTest.cpp
         unit/UtxoTest.cpp
         unit/VarIntTest.cpp
         util/doctest.cpp

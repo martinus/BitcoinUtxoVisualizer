@@ -1,4 +1,4 @@
-#include <app/BlockSerializer.h>
+#include <app/BlockEncoder.h>
 
 #include <util/hex.h>
 
@@ -6,20 +6,20 @@
 #include <fmt/format.h>
 
 // creates the data structure
-TEST_CASE("block_serializer_test_simple") {
-    auto bs = buv::BlockSerializer();
+TEST_CASE("block_encoder_test_simple") {
+    auto bs = buv::BlockEncoder();
     bs.beginBlock(123456);
     bs.endBlock();
 
     std::string data;
-    bs.serialize(data);
+    bs.encode(data);
 
     REQUIRE(data.size() == 4U + 4U + 4U);
-    REQUIRE(data.substr(0, 4) == "BLK0");
+    REQUIRE(data.substr(0, 4) == "BLK\1");
 }
 
-TEST_CASE("block_serializer_test_data") {
-    auto bs = buv::BlockSerializer();
+TEST_CASE("block_encoder_test_data") {
+    auto bs = buv::BlockEncoder();
     bs.beginBlock(123456);
     bs.addSpentOutput(777, 93938);
     bs.addSpentOutput(760, 93940);
@@ -27,6 +27,6 @@ TEST_CASE("block_serializer_test_data") {
     bs.endBlock();
 
     std::string data;
-    bs.serialize(data);
-    REQUIRE(data.substr(0, 4) == "BLK0");
+    bs.encode(data);
+    REQUIRE(data.substr(0, 4) == "BLK\1");
 }

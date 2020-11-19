@@ -1,4 +1,4 @@
-#include <app/BlockSerializer.h>
+#include <app/BlockEncoder.h>
 #include <app/Utxo.h>
 #include <util/HttpClient.h>
 #include <util/log.h>
