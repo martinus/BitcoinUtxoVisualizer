@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <string_view>
 
-TEST_CASE("utxo_to_change") {
+TEST_CASE("utxo_to_change" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
     static constexpr auto dataDir = "../../out/blocks";
     static constexpr auto genesisBlock = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";

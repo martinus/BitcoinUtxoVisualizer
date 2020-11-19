@@ -6,7 +6,7 @@
 
 #include <string_view>
 
-TEST_CASE("load_all_block_headers") {
+TEST_CASE("load_all_block_headers" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
     static constexpr auto genesisBlock = std::string_view("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
 

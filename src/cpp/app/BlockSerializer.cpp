@@ -28,7 +28,7 @@ void BlockSerializer::finishBlock() {
     // first serialize everything into mTmp, so we know exactly how many bytes the block has
     auto prevSatoshi = uint64_t();
     auto prevBlockheight = int64_t();
-    auto varInt = VarInt();
+    auto varInt = util::VarInt();
     for (auto const& [satoshi, blockheight] : mSatoshiAndBlockheight) {
         mTmp += varInt.encode(satoshi - prevSatoshi); // guaranteed to not have an overflow
         mTmp += varInt.encode(static_cast<int64_t>(blockheight) - prevBlockheight);
