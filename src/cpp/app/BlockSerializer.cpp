@@ -12,7 +12,7 @@ void BlockSerializer::beginBlock(uint32_t blockHeight) {
     mSatoshiAndBlockheight.clear();
 }
 
-void BlockSerializer::finishBlock() {
+void BlockSerializer::endBlock() {
     std::sort(mSatoshiAndBlockheight.begin(), mSatoshiAndBlockheight.end());
 }
 

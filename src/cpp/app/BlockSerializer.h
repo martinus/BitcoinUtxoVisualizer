@@ -15,7 +15,7 @@ class BlockSerializer {
 public:
     void beginBlock(uint32_t blockHeight);
     void addSpentOutput(uint32_t blockHeight, uint64_t amountSatoshi);
-    void finishBlock();
+    void endBlock();
 
     // serializes everything into data. Non-const so we can sort mSatoshiAndBlockheight
     void serialize(std::string& data) const;

@@ -9,6 +9,7 @@ target_sources_local(${PROJECT_NAME}
         app/parse_block.cpp
         app/utxo_to_change.cpp
         app/Utxo.cpp
+        unit/BlockSerializerTest.cpp
         unit/UtxoTest.cpp
         unit/VarIntTest.cpp
         util/doctest.cpp
