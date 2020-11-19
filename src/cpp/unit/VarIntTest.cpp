@@ -42,7 +42,7 @@ void testEncDec(T val) {
     REQUIRE(decVal == val);
 }
 
-TEST_CASE("varint_int64_t") {
+TEST_CASE("varint") {
     auto varint = util::VarInt();
     REQUIRE(hex(varint.encode(0)) == "00");
     REQUIRE(hex(varint.encode(-1)) == "01");
