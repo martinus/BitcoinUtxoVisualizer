@@ -18,6 +18,7 @@ public:
 
     [[nodiscard]] auto operator<(SatoshiAndBlockheight const& other) const noexcept -> bool;
     [[nodiscard]] auto operator==(SatoshiAndBlockheight const& other) const noexcept -> bool;
+    [[nodiscard]] auto operator!=(SatoshiAndBlockheight const& other) const noexcept -> bool;
 };
 
 // Encodes & decodes block change data
@@ -48,16 +49,17 @@ public:
     void finalizeBlock();
     [[nodiscard]] auto encode() const -> std::string;
 
-    // decodes the whole changesInBlock, and returns also pointer to the next block.
-    static auto decode(char const* ptr) -> std::pair<ChangesInBlock, char const*>;
-
-    // skips the whole block, and returns the skipped block's blockHeight, and pointer to the next block
-    static auto skip(char const* ptr) -> std::pair<uint32_t, char const*>;
-
     [[nodiscard]] auto operator==(ChangesInBlock const& other) const noexcept -> bool;
+    [[nodiscard]] auto operator!=(ChangesInBlock const& other) const noexcept -> bool;
 
     [[nodiscard]] auto blockHeight() const noexcept -> uint32_t;
     [[nodiscard]] auto satoshiAndBlockheights() const noexcept -> std::vector<SatoshiAndBlockheight> const&;
+
+    // decodes the whole changesInBlock, and returns also pointer to the next block.
+    [[nodiscard]] static auto decode(char const* ptr) -> std::pair<ChangesInBlock, char const*>;
+
+    // skips the whole block, and returns the skipped block's blockHeight, and pointer to the next block
+    [[nodiscard]] static auto skip(char const* ptr) -> std::pair<uint32_t, char const*>;
 };
 
 } // namespace buv

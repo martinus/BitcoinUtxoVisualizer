@@ -30,6 +30,10 @@ SatoshiAndBlockheight::SatoshiAndBlockheight(uint64_t satoshi, uint32_t blockHei
     return mSatoshi == other.mSatoshi && mBlockHeight == other.mBlockHeight;
 }
 
+[[nodiscard]] auto SatoshiAndBlockheight::operator!=(SatoshiAndBlockheight const& other) const noexcept -> bool {
+    return !(*this == other);
+}
+
 ////
 
 void ChangesInBlock::beginBlock(uint32_t blockHeight) {
@@ -132,6 +136,33 @@ auto ChangesInBlock::skip(char const* ptr) -> std::pair<uint32_t, char const*> {
 [[nodiscard]] auto ChangesInBlock::operator==(ChangesInBlock const& other) const noexcept -> bool {
     return mBlockHeight == other.mBlockHeight && mSatoshiAndBlockheights == other.mSatoshiAndBlockheights &&
            mIsFinalized == other.mIsFinalized;
+}
+
+[[nodiscard]] auto ChangesInBlock::operator!=(ChangesInBlock const& other) const noexcept -> bool {
+    return !(*this == other);
+}
+auto ChangesInBlock::decode(char const* ptr) -> std::pair<ChangesInBlock, char const*> {
+    auto [header, payloadPtr] = parseHeader(ptr);
+    auto cib = ChangesInBlock();
+
+    cib.mBlockHeight = header.blockHeight;
+
+    const auto* endPtr = payloadPtr + header.numBytes;
+
+    auto satoshi = uint64_t();
+    auto blockHeight = int64_t();
+    while (payloadPtr < endPtr) {
+        auto diff = SatoshiAndBlockheight(0, 0);
+        auto diffSatoshi = uint64_t();
+        auto diffBlockheight = int64_t();
+        std::tie(diffSatoshi, payloadPtr) = util::VarInt::decode<uint64_t>(payloadPtr);
+        std::tie(diffBlockheight, payloadPtr) = util::VarInt::decode<int64_t>(payloadPtr);
+        satoshi += diffSatoshi;
+        blockHeight += diffBlockheight;
+        cib.mSatoshiAndBlockheights.emplace_back(satoshi, blockHeight);
+    }
+
+    return std::make_pair(cib, payloadPtr);
 }
 
 } // namespace buv
