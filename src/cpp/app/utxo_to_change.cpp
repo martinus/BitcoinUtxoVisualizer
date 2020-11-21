@@ -88,12 +88,33 @@ public:
     return cib;
 }
 
-auto size(buv::Utxo const& utxo) -> size_t {
-    auto s = size_t();
-    for (auto const& x : utxo) {
-        s += x.second.utxoPerTx.size();
+[[nodiscard]] auto loadAllBlockHashes(std::unique_ptr<util::HttpClient> const& cli, std::string_view startBlock)
+    -> std::vector<std::string> {
+    auto allBlockHashes = std::vector<std::string>();
+    auto throttler = Throttler(1s);
+
+    auto jsonParser = simdjson::dom::parser();
+    auto block = startBlock;
+    while (true) {
+        auto json = cli->get("/rest/headers/2000/{}.json", block);
+        simdjson::dom::array data = jsonParser.parse(json);
+
+        // auto nextblockhash = std::string_view();
+        for (simdjson::dom::element e : data) {
+            allBlockHashes.emplace_back(e["hash"].get_string().value());
+        }
+        simdjson::dom::element last = data.at(data.size() - 1);
+        LOG_IF(throttler() ? util::Log::show : util::Log::hide, "got {} headers", allBlockHashes.size());
+
+        if (last["nextblockhash"].get(block) != 0U) {
+            // field not found, finished!
+            LOG("block headers done! got {} headers", allBlockHashes.size());
+            return allBlockHashes;
+        }
+
+        // it's ok to use std::string_view for block, because it is available until the parse() call, at which point we already
+        // have used it.
     }
-    return s;
 }
 
 TEST_CASE("utxo_to_change" * doctest::skip()) {
@@ -109,10 +130,10 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     std::filesystem::create_directories(dataDir);
 
     fmt::print("created {}, accessing bitcoin at {}\n", dataDir, bitcoinRpcUrl);
-
     auto cli = util::HttpClient::create(bitcoinRpcUrl);
     auto jsonParser = simdjson::dom::parser();
 
+    auto allBlockHashes = loadAllBlockHashes(cli, startBlock);
     auto nextblockhash = std::string_view(startBlock);
 
     auto throttler = Throttler(1s);
@@ -125,11 +146,10 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         simdjson::dom::element blockData = jsonParser.parse(json);
         auto cib = integrateBlockData(blockData, utxo);
         LOG_IF(throttler() ? util::Log::show : util::Log::hide,
-               "height={}, bytes={}. utxo: {} entries ({} total)",
+               "height={}, bytes={}. utxo: {} entries",
                cib.blockHeight(),
                json.size(),
-               utxo.size(),
-               size(utxo));
+               utxo.size());
 
         fout << cib.encode();
 
