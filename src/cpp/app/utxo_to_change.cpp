@@ -84,14 +84,27 @@ public:
             ++n;
         }
     }
-
+    cib.finalizeBlock();
     return cib;
+}
+
+auto size(buv::Utxo const& utxo) -> size_t {
+    auto s = size_t();
+    for (auto const& x : utxo) {
+        s += x.second.utxoPerTx.size();
+    }
+    return s;
 }
 
 TEST_CASE("utxo_to_change" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
     static constexpr auto dataDir = "../../out/blocks";
-    static constexpr auto genesisBlock = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
+
+    // genesis block, height 0
+    static constexpr auto startBlock = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
+
+    // block 645693
+    // static constexpr auto startBlock = "0000000000000000000e5c22c24fd31a29d8ecb2c2cec80d3a9cb75b7aa54f18";
 
     std::filesystem::create_directories(dataDir);
 
@@ -100,7 +113,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto cli = util::HttpClient::create(bitcoinRpcUrl);
     auto jsonParser = simdjson::dom::parser();
 
-    auto nextblockhash = std::string_view(genesisBlock);
+    auto nextblockhash = std::string_view(startBlock);
 
     auto throttler = Throttler(1s);
 
@@ -111,7 +124,14 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         auto json = cli->get("/rest/block/{}.json", nextblockhash);
         simdjson::dom::element blockData = jsonParser.parse(json);
         auto cib = integrateBlockData(blockData, utxo);
-        LOG_IF(throttler() ? util::Log::show : util::Log::hide, "height={}, bytes={}", cib.blockHeight(), json.size());
+        LOG_IF(throttler() ? util::Log::show : util::Log::hide,
+               "height={}, bytes={}. utxo: {} entries ({} total)",
+               cib.blockHeight(),
+               json.size(),
+               utxo.size(),
+               size(utxo));
+
+        fout << cib.encode();
 
         if (blockData["nextblockhash"].get(nextblockhash) != 0U) {
             // last block, stop everything
