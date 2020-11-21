@@ -29,8 +29,9 @@ void dump(buv::Utxo const& utxo, std::filesystem::path const& filename) {
     bsw.write<8>(utxo.size());
     for (auto const& [txid, utxoPerTx] : utxo) {
         bsw.write<16>(txid);
-        bsw.write<8>(utxoPerTx.size());
-        for (auto const& [voutNr, satoshi] : utxoPerTx) {
+        bsw.write<4>(utxoPerTx.blockHeight);
+        bsw.write<8>(utxoPerTx.utxoPerTx.size());
+        for (auto const& [voutNr, satoshi] : utxoPerTx.utxoPerTx) {
             bsw.write<2>(voutNr);
             bsw.write<8>(satoshi);
         }
@@ -57,15 +58,16 @@ auto loadUtxo(std::filesystem::path const& utxoFilename) -> Utxo { // TODO(marti
         auto txid = bsr.read<16, TxId>();
         auto numUtxoPerTx = bsr.read<8, size_t>();
 
-        auto utxoPerTx = UtxoPerTx();
-        utxoPerTx.reserve(numUtxoPerTx);
+        auto blockheightAndUtxoPerTx = UtxoPerTx();
+        blockheightAndUtxoPerTx.blockHeight = bsr.read<4, uint32_t>();
+        blockheightAndUtxoPerTx.utxoPerTx.reserve(numUtxoPerTx);
         for (size_t u = 0; u < numUtxoPerTx; ++u) {
             auto voutNr = bsr.read<2, uint16_t>();
             auto satoshi = bsr.read<8, uint64_t>();
-            utxoPerTx.emplace(voutNr, satoshi);
+            blockheightAndUtxoPerTx.utxoPerTx.emplace(voutNr, satoshi);
         }
         // TODO(martinus) make sure this is a move!
-        utxo.emplace(txid, std::move(utxoPerTx));
+        utxo.emplace(txid, std::move(blockheightAndUtxoPerTx));
     }
 
     return utxo;
