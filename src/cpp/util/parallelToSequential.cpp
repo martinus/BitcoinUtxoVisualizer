@@ -1,7 +1,5 @@
 #include "parallelToSequential.h"
 
-#include <util/log.h>
-
 #include <atomic>
 #include <mutex>
 #include <thread>
@@ -33,7 +31,6 @@ void parallelToSequential(size_t numWorkers,
                 {
                     auto lock = std::scoped_lock(mutex);
                     finishedSequenceIds.insert(mySequenceId);
-                    LOG("{:5} entries", finishedSequenceIds.size());
 
                     // try to process sequence IDs, if possible. TODO(martinus) This can be done a bit smarter. E.g. don't insert
                     // when we know it's us who can continue working.

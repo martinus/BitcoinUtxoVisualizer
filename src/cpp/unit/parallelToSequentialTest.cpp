@@ -9,17 +9,25 @@
 using namespace std::literals;
 
 TEST_CASE("parallel_to_sequential") {
+    static constexpr auto numItems = 10000;
+    auto hasIdProcessed = std::vector<uint8_t>(numItems, 0);
+
+    auto expectedSequenceNumber = size_t();
     util::parallelToSequential(
         std::thread::hardware_concurrency(),
-        100,
-        [](size_t workerId, size_t sequenceId) {
-            LOG("Worker {:3} parallel     processing {:5} start", workerId, sequenceId);
-            std::this_thread::sleep_for(1ms);
-            LOG("Worker {:3} parallel     processing {:5} done", workerId, sequenceId);
+        numItems,
+        [&](size_t /*workerId*/, size_t sequenceId) {
+            REQUIRE(hasIdProcessed[sequenceId] == 0);
+            hasIdProcessed[sequenceId] = 1;
         },
-        [](size_t workerId, size_t sequenceId) {
-            LOG("Worker {:3} sequentially processing {:5} start", workerId, sequenceId);
-            std::this_thread::sleep_for(100ms);
-            LOG("Worker {:3} sequentially processing {:5} done", workerId, sequenceId);
+        [&](size_t /*workerId*/, size_t sequenceId) {
+            REQUIRE(sequenceId == expectedSequenceNumber);
+            REQUIRE(hasIdProcessed[sequenceId] == 1);
+            REQUIRE(++hasIdProcessed[sequenceId]);
+            ++expectedSequenceNumber;
         });
+
+    for (auto b : hasIdProcessed) {
+        REQUIRE(b == 2);
+    }
 }
