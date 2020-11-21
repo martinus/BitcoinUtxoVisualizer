@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring> // std::memcpy
 #include <filesystem>
+#include <string_view>
 
 namespace buv {
 

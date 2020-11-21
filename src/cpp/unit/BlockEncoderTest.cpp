@@ -37,7 +37,7 @@ auto makeTwoBlocks() -> std::vector<buv::ChangesInBlock> {
     cib.beginBlock(123456);
     cib.addChange(93938, 777);
     cib.addChange(93940, 760);
-    cib.addChange(132, 789);
+    cib.addChange(-132, 789);
     cib.finalizeBlock();
     cibs.emplace_back(cib);
 
@@ -69,14 +69,14 @@ TEST_CASE("block_encode_and_decode") {
 
     auto [cib, ptr] = buv::ChangesInBlock::decode(data.data());
     REQUIRE(cib.blockHeight() == 123456);
-    REQUIRE(cib.satoshiAndBlockheights().size() == 3);
-    REQUIRE(cib.satoshiAndBlockheights()[0] == buv::SatoshiAndBlockheight(132, 789));
-    REQUIRE(cib.satoshiAndBlockheights()[1] == buv::SatoshiAndBlockheight(93938, 777));
-    REQUIRE(cib.satoshiAndBlockheights()[2] == buv::SatoshiAndBlockheight(93940, 760));
+    REQUIRE(cib.changeAtBlockheights().size() == 3);
+    REQUIRE(cib.changeAtBlockheights()[0] == buv::ChangeAtBlockheight(-132, 789));
+    REQUIRE(cib.changeAtBlockheights()[1] == buv::ChangeAtBlockheight(93938, 777));
+    REQUIRE(cib.changeAtBlockheights()[2] == buv::ChangeAtBlockheight(93940, 760));
 
     std::tie(cib, ptr) = buv::ChangesInBlock::decode(ptr);
     REQUIRE(cib.blockHeight() == 123457);
-    REQUIRE(cib.satoshiAndBlockheights().size() == 2);
-    REQUIRE(cib.satoshiAndBlockheights()[0] == buv::SatoshiAndBlockheight(93888, 12345));
-    REQUIRE(cib.satoshiAndBlockheights()[1] == buv::SatoshiAndBlockheight(94888, 12346));
+    REQUIRE(cib.changeAtBlockheights().size() == 2);
+    REQUIRE(cib.changeAtBlockheights()[0] == buv::ChangeAtBlockheight(93888, 12345));
+    REQUIRE(cib.changeAtBlockheights()[1] == buv::ChangeAtBlockheight(94888, 12346));
 }

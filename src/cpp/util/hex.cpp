@@ -7,7 +7,7 @@
 
 namespace util {
 
-auto hex(std::string_view input) -> std::string {
+auto toHex(std::string_view input) -> std::string {
     return fmt::format("{}", Hex{input});
 }
 

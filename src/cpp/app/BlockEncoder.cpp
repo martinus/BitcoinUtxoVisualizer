@@ -7,30 +7,30 @@
 
 namespace buv {
 
-SatoshiAndBlockheight::SatoshiAndBlockheight(uint64_t satoshi, uint32_t blockHeight)
+ChangeAtBlockheight::ChangeAtBlockheight(int64_t satoshi, uint32_t blockHeight)
     : mSatoshi(satoshi)
     , mBlockHeight(blockHeight) {}
 
-[[nodiscard]] auto SatoshiAndBlockheight::satoshi() const noexcept -> uint64_t {
+[[nodiscard]] auto ChangeAtBlockheight::satoshi() const noexcept -> int64_t {
     return mSatoshi;
 }
 
-[[nodiscard]] auto SatoshiAndBlockheight::blockHeight() const noexcept -> uint32_t {
+[[nodiscard]] auto ChangeAtBlockheight::blockHeight() const noexcept -> uint32_t {
     return mBlockHeight;
 }
 
-[[nodiscard]] auto SatoshiAndBlockheight::operator<(SatoshiAndBlockheight const& other) const noexcept -> bool {
+[[nodiscard]] auto ChangeAtBlockheight::operator<(ChangeAtBlockheight const& other) const noexcept -> bool {
     if (mSatoshi != other.mSatoshi) {
         return mSatoshi < other.mSatoshi;
     }
     return mBlockHeight < other.mBlockHeight;
 }
 
-[[nodiscard]] auto SatoshiAndBlockheight::operator==(SatoshiAndBlockheight const& other) const noexcept -> bool {
+[[nodiscard]] auto ChangeAtBlockheight::operator==(ChangeAtBlockheight const& other) const noexcept -> bool {
     return mSatoshi == other.mSatoshi && mBlockHeight == other.mBlockHeight;
 }
 
-[[nodiscard]] auto SatoshiAndBlockheight::operator!=(SatoshiAndBlockheight const& other) const noexcept -> bool {
+[[nodiscard]] auto ChangeAtBlockheight::operator!=(ChangeAtBlockheight const& other) const noexcept -> bool {
     return !(*this == other);
 }
 
@@ -39,22 +39,22 @@ SatoshiAndBlockheight::SatoshiAndBlockheight(uint64_t satoshi, uint32_t blockHei
 void ChangesInBlock::beginBlock(uint32_t blockHeight) {
     mIsFinalized = false;
     mBlockHeight = blockHeight;
-    mSatoshiAndBlockheights.clear();
+    mChangeAtBlockheights.clear();
 }
 
 void ChangesInBlock::finalizeBlock() {
     if (mIsFinalized) {
         throw std::runtime_error("finalizeBlock() has already been called, not needed any more");
     }
-    std::sort(mSatoshiAndBlockheights.begin(), mSatoshiAndBlockheights.end());
+    std::sort(mChangeAtBlockheights.begin(), mChangeAtBlockheights.end());
     mIsFinalized = true;
 }
 
-void ChangesInBlock::addChange(uint64_t satoshi, uint32_t blockHeight) {
+void ChangesInBlock::addChange(int64_t satoshi, uint32_t blockHeight) {
     if (mIsFinalized) {
         throw std::runtime_error("can't add an amount after finalizeBlock()");
     }
-    mSatoshiAndBlockheights.emplace_back(satoshi, blockHeight);
+    mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
 }
 
 auto ChangesInBlock::encode() const -> std::string {
@@ -71,27 +71,42 @@ auto ChangesInBlock::encode() const -> std::string {
     // block.
     data.append(4, '\0');
 
-    // now comes the data in mSatoshiAndBlockheight. Sorted by satoshi, so the satoshi's only go up.
-    // We only store the difference to the previous satoshi amount, encoded as unsigned varint. Thus,
-    // the amounts will be stored quite compact. Only thing better would be golomb coded sets
-    // https://en.wikipedia.org/wiki/Golomb_coding
-    //
-    // We also store diffs of block size, but they will be encoded as signed integers, because they can be quite random.
-    // already sorted in finishBlock()
-    auto varIntEncoder = util::VarInt();
+    if (!mChangeAtBlockheights.empty()) {
+        // now comes the data in mChangeAtBlockheight. Sorted by satoshi, so the satoshi's only go up.
+        // The first entry will probably be negative, if anny old amount was spent. That is encoded as var_int.
+        //
+        // We only store the difference to the previous satoshi amount for the following entries, encoded as unsigned varint.
+        // Thus, the amounts will be stored quite compact. Only thing better would be golomb coded sets
+        // https://en.wikipedia.org/wiki/Golomb_coding
+        //
+        // We also store diffs of block size, but they will be encoded as signed integers, because they can be quite random.
+        // already sorted in finishBlock()
+        auto varIntEncoder = util::VarInt();
 
-    auto prev = SatoshiAndBlockheight(0, 0);
-    for (auto const& now : mSatoshiAndBlockheights) {
-        data += varIntEncoder.encode<uint64_t>(now.satoshi() - prev.satoshi());
-        data += varIntEncoder.encode<int64_t>(static_cast<int64_t>(now.blockHeight()) - static_cast<int64_t>(prev.blockHeight()));
+        // TODO(martinus) encode first amount correctly
+        auto it = mChangeAtBlockheights.begin();
+        data += varIntEncoder.encode<int64_t>(it->satoshi());
+        data += varIntEncoder.encode<uint64_t>(it->blockHeight());
 
-        prev = now;
+        auto pre = it;
+        ++it;
+
+        while (it != mChangeAtBlockheights.end()) {
+            // the amount diff will always be positive since its sorted, so we can serialize an uint
+            data += varIntEncoder.encode<uint64_t>(it->satoshi() - pre->satoshi());
+            // diff of blockheight can be negative as well
+            data +=
+                varIntEncoder.encode<int64_t>(static_cast<int64_t>(it->blockHeight()) - static_cast<int64_t>(pre->blockHeight()));
+
+            pre = it;
+            ++it;
+        }
+
+        // finally, fill in the payload size
+        // "BLK0" + blockheight + payloadSize
+        auto payloadSize = static_cast<uint32_t>(data.size() - (4U + 4U + 4U));
+        std::memcpy(data.data() + (4U + 4U), &payloadSize, 4U);
     }
-
-    // finally, fill in the payload size
-    // "BLK0" + blockheight + payloadSize
-    auto payloadSize = static_cast<uint32_t>(data.size() - (4U + 4U + 4U));
-    std::memcpy(data.data() + (4U + 4U), &payloadSize, 4U);
 
     return data;
 }
@@ -100,8 +115,8 @@ auto ChangesInBlock::encode() const -> std::string {
     return mBlockHeight;
 }
 
-[[nodiscard]] auto ChangesInBlock::satoshiAndBlockheights() const noexcept -> std::vector<SatoshiAndBlockheight> const& {
-    return mSatoshiAndBlockheights;
+[[nodiscard]] auto ChangesInBlock::changeAtBlockheights() const noexcept -> std::vector<ChangeAtBlockheight> const& {
+    return mChangeAtBlockheights;
 }
 
 namespace {
@@ -134,7 +149,7 @@ auto ChangesInBlock::skip(char const* ptr) -> std::pair<uint32_t, char const*> {
 }
 
 [[nodiscard]] auto ChangesInBlock::operator==(ChangesInBlock const& other) const noexcept -> bool {
-    return mBlockHeight == other.mBlockHeight && mSatoshiAndBlockheights == other.mSatoshiAndBlockheights &&
+    return mBlockHeight == other.mBlockHeight && mChangeAtBlockheights == other.mChangeAtBlockheights &&
            mIsFinalized == other.mIsFinalized;
 }
 
@@ -149,17 +164,20 @@ auto ChangesInBlock::decode(char const* ptr) -> std::pair<ChangesInBlock, char c
 
     const auto* endPtr = payloadPtr + header.numBytes;
 
-    auto satoshi = uint64_t();
+    auto satoshi = int64_t();
     auto blockHeight = int64_t();
+    std::tie(satoshi, payloadPtr) = util::VarInt::decode<int64_t>(payloadPtr);
+    std::tie(blockHeight, payloadPtr) = util::VarInt::decode<uint64_t>(payloadPtr);
+    cib.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
+
     while (payloadPtr < endPtr) {
-        auto diff = SatoshiAndBlockheight(0, 0);
         auto diffSatoshi = uint64_t();
         auto diffBlockheight = int64_t();
         std::tie(diffSatoshi, payloadPtr) = util::VarInt::decode<uint64_t>(payloadPtr);
         std::tie(diffBlockheight, payloadPtr) = util::VarInt::decode<int64_t>(payloadPtr);
         satoshi += diffSatoshi;
         blockHeight += diffBlockheight;
-        cib.mSatoshiAndBlockheights.emplace_back(satoshi, blockHeight);
+        cib.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
     }
 
     return std::make_pair(cib, payloadPtr);

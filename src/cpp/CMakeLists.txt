@@ -10,6 +10,7 @@ target_sources_local(${PROJECT_NAME}
         app/utxo_to_change.cpp
         app/Utxo.cpp
         unit/BlockEncoderTest.cpp
+        unit/HexTest.cpp
         unit/UtxoTest.cpp
         unit/VarIntTest.cpp
         util/doctest.cpp

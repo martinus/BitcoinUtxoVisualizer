@@ -14,16 +14,16 @@ void testEncDec(T val) {
 }
 
 TEST_CASE("varint") {
-    using util::hex;
+    using util::toHex;
 
     auto varint = util::VarInt();
-    REQUIRE(hex(varint.encode(0)) == "00");
-    REQUIRE(hex(varint.encode(-1)) == "01");
-    REQUIRE(hex(varint.encode(1)) == "02");
-    REQUIRE(hex(varint.encode(-2)) == "03");
-    REQUIRE(hex(varint.encode(2)) == "04");
+    REQUIRE(toHex(varint.encode(0)) == "00");
+    REQUIRE(toHex(varint.encode(-1)) == "01");
+    REQUIRE(toHex(varint.encode(1)) == "02");
+    REQUIRE(toHex(varint.encode(-2)) == "03");
+    REQUIRE(toHex(varint.encode(2)) == "04");
 
-    REQUIRE(hex(varint.encode(123456)) == "80890f");
+    REQUIRE(toHex(varint.encode(123456)) == "80890f");
     testEncDec(127U);
     testEncDec(128U);
     testEncDec(123456U);
