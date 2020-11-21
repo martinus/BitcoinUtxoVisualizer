@@ -11,6 +11,7 @@ target_sources_local(${PROJECT_NAME}
         app/Utxo.cpp
         unit/BlockEncoderTest.cpp
         unit/HexTest.cpp
+        unit/parallelToSequentialTest.cpp
         unit/UtxoTest.cpp
         unit/VarIntTest.cpp
         util/doctest.cpp
@@ -18,4 +19,5 @@ target_sources_local(${PROJECT_NAME}
         util/HttpClient.cpp
         util/Mmap.cpp
         util/nanobench.cpp
+        util/parallelToSequential.cpp
 )
