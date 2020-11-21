@@ -14,6 +14,6 @@ namespace util {
 void parallelToSequential(size_t numWorkers,
                           size_t sequenceSize,
                           std::function<void(size_t, size_t)> const& parallelWorker,
-                          std::function<void(size_t)> const& sequentialWorker);
+                          std::function<void(size_t, size_t)> const& sequentialWorker);
 
 } // namespace util
