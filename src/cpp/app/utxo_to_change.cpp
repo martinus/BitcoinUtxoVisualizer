@@ -3,6 +3,7 @@
 #include <util/HttpClient.h>
 #include <util/hex.h>
 #include <util/log.h>
+#include <util/parallelToSequential.h>
 
 #include <doctest.h>
 #include <fmt/format.h>
@@ -117,6 +118,13 @@ public:
     }
 }
 
+struct ResourceData {
+    std::unique_ptr<util::HttpClient> cli{};
+    std::string jsonData{};
+    simdjson::dom::parser jsonParser{};
+    simdjson::dom::element blockData{};
+};
+
 TEST_CASE("utxo_to_change" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
     static constexpr auto dataDir = "../../out/blocks";
@@ -134,13 +142,40 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto jsonParser = simdjson::dom::parser();
 
     auto allBlockHashes = loadAllBlockHashes(cli, startBlock);
-    auto nextblockhash = std::string_view(startBlock);
 
     auto throttler = Throttler(1s);
 
     auto fout = std::ofstream(std::filesystem::path(dataDir) / "changes.blk1", std::ios::binary | std::ios::out);
     auto utxo = buv::Utxo();
 
+    auto resources = std::vector<ResourceData>(20);
+    for (auto& resource : resources) {
+        resource.cli = util::HttpClient::create(bitcoinRpcUrl);
+    }
+
+    util::parallelToSequential(
+        util::SequenceId{allBlockHashes.size()},
+        util::ResourceId{resources.size()},
+        [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
+            auto& res = resources[resourceId.count()];
+            auto& hash = allBlockHashes[sequenceId.count()];
+
+            res.jsonData = res.cli->get("/rest/block/{}.json", hash);
+            res.blockData = res.jsonParser.parse(res.jsonData);
+        },
+        [&](util::ResourceId resourceId, util::SequenceId /*sequenceId*/) {
+            auto& res = resources[resourceId.count()];
+
+            auto cib = integrateBlockData(res.blockData, utxo);
+            LOG_IF(throttler() ? util::Log::show : util::Log::hide,
+                   "height={}, bytes={}. utxo: {} entries",
+                   cib.blockHeight(),
+                   res.jsonData.size(),
+                   utxo.size());
+            fout << cib.encode();
+        });
+
+#if 0
     while (true) {
         auto json = cli->get("/rest/block/{}.json", nextblockhash);
         simdjson::dom::element blockData = jsonParser.parse(json);
@@ -158,4 +193,5 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             break;
         }
     }
+#endif
 }
