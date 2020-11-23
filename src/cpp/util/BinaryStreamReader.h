@@ -9,12 +9,12 @@ namespace util {
 
 // Helper to read binary data from a sequential chunk of memory
 class BinaryStreamReader {
-    uint8_t const* mNow = nullptr;
-    uint8_t const* mEnd = nullptr;
+    char const* mNow = nullptr;
+    char const* mEnd = nullptr;
 
 public:
-    inline explicit BinaryStreamReader(void* data, size_t size)
-        : mNow(reinterpret_cast<uint8_t const*>(data))
+    inline explicit BinaryStreamReader(char const* data, size_t size)
+        : mNow(data)
         , mEnd(mNow + size) {}
 
     // writes any binary blob. Makes sure it is actually serializable trivially

@@ -127,11 +127,16 @@ auto ChangesInBlock::skip(char const* ptr) -> std::pair<uint32_t, char const*> {
 [[nodiscard]] auto ChangesInBlock::operator!=(ChangesInBlock const& other) const noexcept -> bool {
     return !(*this == other);
 }
-auto ChangesInBlock::decode(char const* ptr) -> std::pair<ChangesInBlock, char const*> {
-    auto [header, payloadPtr] = parseHeader(ptr);
-    auto cib = ChangesInBlock();
 
-    cib.mBlockHeight = header.blockHeight;
+auto ChangesInBlock::decode(char const* ptr) -> std::pair<ChangesInBlock, char const*> {
+    return decode(ChangesInBlock(), ptr);
+}
+
+auto ChangesInBlock::decode(ChangesInBlock&& reusableChanges, char const* ptr) -> std::pair<ChangesInBlock, char const*> {
+    auto [header, payloadPtr] = parseHeader(ptr);
+    reusableChanges.mChangeAtBlockheights.clear();
+
+    reusableChanges.mBlockHeight = header.blockHeight;
 
     const auto* endPtr = payloadPtr + header.numBytes;
 
@@ -139,19 +144,20 @@ auto ChangesInBlock::decode(char const* ptr) -> std::pair<ChangesInBlock, char c
     auto blockHeight = int64_t();
     std::tie(satoshi, payloadPtr) = util::VarInt::decode<int64_t>(payloadPtr);
     std::tie(blockHeight, payloadPtr) = util::VarInt::decode<uint64_t>(payloadPtr);
-    cib.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
+    reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
 
     while (payloadPtr < endPtr) {
         auto diffSatoshi = uint64_t();
         auto diffBlockheight = int64_t();
-        std::tie(diffSatoshi, payloadPtr) = util::VarInt::decode<uint64_t>(payloadPtr);
-        std::tie(diffBlockheight, payloadPtr) = util::VarInt::decode<int64_t>(payloadPtr);
+
+        util::VarInt::decodeV2<uint64_t>(diffSatoshi, payloadPtr);
+        util::VarInt::decodeV2<int64_t>(diffBlockheight, payloadPtr);
         satoshi += diffSatoshi;
         blockHeight += diffBlockheight;
-        cib.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
+        reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
     }
 
-    return std::make_pair(cib, payloadPtr);
+    return std::make_pair(std::move(reusableChanges), payloadPtr);
 }
 
 } // namespace buv

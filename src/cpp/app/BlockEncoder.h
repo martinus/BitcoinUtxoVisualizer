@@ -81,6 +81,7 @@ public:
 
     // decodes the whole changesInBlock, and returns also pointer to the next block.
     [[nodiscard]] static auto decode(char const* ptr) -> std::pair<ChangesInBlock, char const*>;
+    [[nodiscard]] static auto decode(ChangesInBlock&& reusableChanges, char const* ptr) -> std::pair<ChangesInBlock, char const*>;
 
     // skips the whole block, and returns the skipped block's blockHeight, and pointer to the next block
     [[nodiscard]] static auto skip(char const* ptr) -> std::pair<uint32_t, char const*>;

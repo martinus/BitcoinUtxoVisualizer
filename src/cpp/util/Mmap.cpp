@@ -67,16 +67,25 @@ auto Mmap::operator=(Mmap&& other) noexcept -> Mmap& {
     return *this;
 }
 
+auto Mmap::data() const -> char const* {
+    return static_cast<char const*>(mData);
+}
+
 auto Mmap::size() const -> size_t {
     return mSize;
 }
 
-auto Mmap::data() const -> void* {
-    return mData;
+auto Mmap::begin() const -> char const* {
+    return static_cast<char const*>(mData);
 }
 
+auto Mmap::end() const -> char const* {
+    return static_cast<char const*>(mData) + mSize;
+}
+
+
 auto Mmap::view() const -> std::string_view {
-    return std::string_view(reinterpret_cast<char const*>(mData), mSize);
+    return std::string_view(static_cast<char const*>(mData), mSize);
 }
 
 auto Mmap::is_open() const -> bool {

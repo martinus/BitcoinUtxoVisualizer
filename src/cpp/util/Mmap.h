@@ -13,6 +13,8 @@ class Mmap {
     int mFileDescriptor = -1;
 
 public:
+    ~Mmap();
+
     // if pool is not specified, it allocates one itself.
     explicit Mmap(std::filesystem::path const& filename);
 
@@ -26,12 +28,11 @@ public:
 
     [[nodiscard]] auto is_open() const -> bool;
 
-    ~Mmap();
-
-    [[nodiscard]] auto data() const -> void*;
-
-    // size in bytes
+    [[nodiscard]] auto data() const -> char const*;
     [[nodiscard]] auto size() const -> size_t;
+
+    [[nodiscard]] auto begin() const -> char const*;
+    [[nodiscard]] auto end() const -> char const*;
 
     // Gets a std::string_view of the whole mmaped file
     [[nodiscard]] auto view() const -> std::string_view;

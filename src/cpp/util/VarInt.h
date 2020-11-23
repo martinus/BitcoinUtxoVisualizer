@@ -6,10 +6,98 @@
 #include <istream>
 #include <string_view>
 
-// Encodes & decodes varint.
+// Encodes & decodes varint, in LEB128 format. See https://en.wikipedia.org/wiki/LEB128
+//
 // each byte has 7 bit of contents, and the highest bit is 1. If highest bit is 0, this is the last byte of the int.
 // signed integers are zigzag-encoded.
 namespace util {
+
+namespace {
+
+// 16/7 = 2.28 => maximum 3 btes for 16bit
+// 32/7 = 4.5 => maximum 5 bytes for 32bit
+// 64/7 = 9.14 => maximum 10 bytes for 64bit
+template <typename UT>
+[[nodiscard]] auto decodeUint(char const*& ptr) -> UT {
+    static_assert(std::is_unsigned_v<UT>);
+
+    // byte 1
+    auto b = static_cast<UT>(*ptr++);
+    auto val = static_cast<UT>(b & 127);
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 2
+    b = *ptr++;
+    val |= (b & 127) << (7 * 1);
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 3
+    b = *ptr++;
+    val |= (b & 127) << (7 * 2);
+
+    if constexpr (sizeof(UT) == 2) {
+        return val;
+    }
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 4
+    b = *ptr++;
+    val |= (b & 127) << (7 * 3);
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 5
+    b = *ptr++;
+    val |= (b & 127) << (7 * 4);
+    if constexpr (sizeof(UT) == 4) {
+        return val;
+    }
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 6
+    b = *ptr++;
+    val |= (b & 127) << (7 * 5);
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 7
+    b = *ptr++;
+    val |= (b & 127) << (7 * 6);
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 8
+    b = *ptr++;
+    val |= (b & 127) << (7 * 7);
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 9
+    b = *ptr++;
+    val |= (b & 127) << (7 * 8);
+    if (b < 128) {
+        return val;
+    };
+
+    // byte 10
+    b = *ptr++;
+    val |= (b & 127) << (7 * 9);
+    return val;
+}
+
+} // namespace
 
 // writes varint into an internal buffer. Will be overwritten every call to encode()
 class VarInt {
@@ -56,6 +144,19 @@ public:
             // zig zag decode
             auto val = static_cast<T>((uVal >> 1U) ^ -(uVal & 1));
             return std::make_pair(val, ptr);
+        }
+    }
+
+    // decodes from ptr, returns the decoded value and the new iterator position.
+    template <typename T>
+    static void decodeV2(T& val, char const*& ptr) {
+        if constexpr (std::is_unsigned_v<T>) {
+            val = decodeUint<T>(ptr);
+        } else {
+            // zig zag decode
+            using UT = std::make_unsigned_t<T>;
+            auto uVal = decodeUint<UT>(ptr);
+            val = static_cast<T>((uVal >> 1U) ^ -(uVal & 1));
         }
     }
 };
