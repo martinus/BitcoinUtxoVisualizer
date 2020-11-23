@@ -4,6 +4,7 @@
 #include <util/BinaryStreamWriter.h>
 #include <util/Mmap.h>
 #include <util/log.h>
+#include <util/reserve.h>
 
 #include <fstream>
 
@@ -30,7 +31,7 @@ void dump(buv::Utxo const& utxo, std::filesystem::path const& filename) {
     bsw.write<8>(utxo.size());
     LOG("dump {}", utxo.size());
     for (auto const& [txid, utxoPerTx] : utxo) {
-        bsw.write<16>(txid);
+        bsw.write<buv::txidPrefixSize>(txid);
         bsw.write<8>(utxoPerTx.size());
         for (auto const& [voutNr, satoshi] : utxoPerTx) {
             bsw.write<2, uint16_t>(voutNr);
@@ -43,24 +44,24 @@ void dump(buv::Utxo const& utxo, std::filesystem::path const& filename) {
 
 namespace buv {
 
-auto loadUtxo(std::filesystem::path const& utxoFilename) -> Utxo {
+auto loadUtxo(std::filesystem::path const& utxoFilename) -> std::unique_ptr<Utxo> {
     auto mappedFile = util::Mmap(utxoFilename);
     if (!mappedFile.is_open()) {
         throw std::runtime_error("could not open utxo filename");
     }
 
-    auto utxo = Utxo();
+    auto utxo = std::make_unique<Utxo>();
 
     auto bsr = util::BinaryStreamReader(mappedFile.data(), mappedFile.size());
     auto numTx = bsr.read<8, size_t>();
 
-    utxo.reserve(numTx);
+    util::reserve(*utxo, numTx);
     for (size_t i = 0; i < numTx; ++i) {
-        auto txid = bsr.read<16, TxId>();
-        auto& utxoPerTx = utxo[txid];
+        auto txid = bsr.read<buv::txidPrefixSize, TxIdPrefix>();
+        auto& utxoPerTx = (*utxo)[txid];
 
         auto numUtxoPerTx = bsr.read<8, size_t>();
-        utxoPerTx.reserve(numUtxoPerTx);
+        util::reserve(utxoPerTx, numUtxoPerTx);
 
         for (size_t u = 0; u < numUtxoPerTx; ++u) {
             auto voutNr = bsr.read<2, uint16_t>();

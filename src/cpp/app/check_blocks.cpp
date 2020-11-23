@@ -1,5 +1,6 @@
 #include <app/loadAllBlockHashes.h>
 #include <util/HttpClient.h>
+#include <util/LogThrottler.h>
 #include <util/hex.h>
 #include <util/log.h>
 #include <util/parallelToSequential.h>
@@ -20,22 +21,27 @@ struct ResourceData {
 
 } // namespace
 
+using namespace std::literals;
+
 TEST_CASE("check_blocks" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
     auto cli = util::HttpClient::create(bitcoinRpcUrl);
 
     // height 557166
-    auto allBlockHashes = buv::loadAllBlockHashes(cli, "000000000000000000042ed26362c7b1844d7530ed89519467f78a1fdf0b9795");
+    // auto allBlockHashes = buv::loadAllBlockHashes(cli, "000000000000000000042ed26362c7b1844d7530ed89519467f78a1fdf0b9795");
+    auto allBlockHashes = buv::loadAllBlockHashes(cli);
 
-    auto resources = std::vector<ResourceData>(100);
+    auto resources = std::vector<ResourceData>(std::thread::hardware_concurrency() * 2);
     for (auto& resource : resources) {
         resource.cli = util::HttpClient::create(bitcoinRpcUrl);
     }
 
+    auto throttler = util::LogThrottler(1s);
+
     util::parallelToSequential(
         util::SequenceId{allBlockHashes.size()},
         util::ResourceId{resources.size()},
-        util::ConcurrentWorkers{std::thread::hardware_concurrency() * 2},
+        util::ConcurrentWorkers{std::thread::hardware_concurrency()},
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             auto& res = resources[resourceId.count()];
             auto& hash = allBlockHashes[sequenceId.count()];
@@ -47,7 +53,9 @@ TEST_CASE("check_blocks" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
             auto& hash = allBlockHashes[sequenceId.count()];
 
-            LOG("block {} at {}, resource {}", hash, sequenceId.count(), resourceId.count());
+            LOG_IF(throttler(), "block {} at {}, resource {}", hash, sequenceId.count(), resourceId.count());
+
+#if 0
 
             auto isCoinbaseTx = true;
             for (auto const& tx : res.blockData["tx"]) {
@@ -72,7 +80,9 @@ TEST_CASE("check_blocks" * doctest::skip()) {
                     (void)sat;
                 }
             }
+#endif
             // free the data
             res.jsonData = std::string();
+            // res.jsonParser = simdjson::dom::parser();
         });
 }

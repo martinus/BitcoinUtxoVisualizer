@@ -6,6 +6,7 @@
 #include <util/hex.h>
 #include <util/log.h>
 #include <util/parallelToSequential.h>
+#include <util/reserve.h>
 
 #include <doctest.h>
 #include <fmt/format.h>
@@ -33,7 +34,7 @@ namespace {
             // first transaction is coinbase, has no inputs
             for (auto const& vin : tx["vin"]) {
                 // txid & voutNr exactly define what is spent
-                auto sourceTxid = util::fromHex<16>(vin["txid"].get_c_str());
+                auto sourceTxid = util::fromHex<buv::txidPrefixSize>(vin["txid"].get_c_str());
                 auto sourceVout = static_cast<uint16_t>(vin["vout"].get_uint64());
 
                 auto unspentSourceOutputs = utxo.find(sourceTxid);
@@ -50,13 +51,13 @@ namespace {
 
                 // remove the spent entry. If the whole tx is spent, remove it as well.
                 unspentSourceOutputs->second.erase(voutAmount);
-                if (unspentSourceOutputs->second.empty()) {
+                if (1U == unspentSourceOutputs->second.size()) {
+                    // only blocksize is left, but no output any more => get rid of the whole map
                     utxo.erase(unspentSourceOutputs);
                 } else {
-                    // if capacity has decreased a lot, free up memory by rehashing.
-                    if (unspentSourceOutputs->second.load_factor() < 0.1) {
-                        unspentSourceOutputs->second.rehash(0);
-                    }
+                    // check if a smaller map would be sufficient
+                    auto& map = unspentSourceOutputs->second;
+                    map.compact();
                 }
             }
         } else {
@@ -64,8 +65,11 @@ namespace {
         }
 
         // add all outputs from this transaction to the utxo
-        auto txid = util::fromHex<16>(tx["txid"].get_c_str());
+        auto txid = util::fromHex<buv::txidPrefixSize>(tx["txid"].get_c_str());
         auto& utxoPerTx = utxo[txid];
+
+        // reserve to hold blockheight + all outputs
+        util::reserve(utxoPerTx, 1 + tx["vout"].get_array().size());
         utxoPerTx[blockHeightIdx] = buv::Satoshi(cib.blockHeight());
 
         auto n = 0;
@@ -110,12 +114,12 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto allBlockHashes = buv::loadAllBlockHashes(cli, startBlock);
 
     auto throttler = util::LogThrottler(1s);
-    auto utxoDumpThrottler = util::LogThrottler(5s);
+    // auto utxoDumpThrottler = util::LogThrottler(20s);
 
     auto fout = std::ofstream(std::filesystem::path(dataDir) / "changes.blk1", std::ios::binary | std::ios::out);
-    auto utxo = buv::Utxo();
+    auto utxo = std::make_unique<buv::Utxo>();
 
-    auto resources = std::vector<ResourceData>(100);
+    auto resources = std::vector<ResourceData>(std::thread::hardware_concurrency() * 2);
     for (auto& resource : resources) {
         resource.cli = util::HttpClient::create(bitcoinRpcUrl);
     }
@@ -123,7 +127,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     util::parallelToSequential(
         util::SequenceId{allBlockHashes.size()},
         util::ResourceId{resources.size()},
-        util::ConcurrentWorkers{std::thread::hardware_concurrency() * 2},
+        util::ConcurrentWorkers{std::thread::hardware_concurrency()},
 
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             auto& res = resources[resourceId.count()];
@@ -134,27 +138,32 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         },
         [&](util::ResourceId resourceId, util::SequenceId /*sequenceId*/) {
             auto& res = resources[resourceId.count()];
+            auto cib = integrateBlockData(res.blockData, *utxo);
 
-            auto cib = integrateBlockData(res.blockData, utxo);
-            LOG_IF(throttler(), "height={}, bytes={}. utxo: {} entries", cib.blockHeight(), res.jsonData.size(), utxo.size());
-            fout << cib.encode();
+            LOG_IF(throttler(), "height={}, bytes={}. utxo: {} entries", cib.blockHeight(), res.jsonData.size(), utxo->size());
 
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)
             res.jsonData = std::string();
 
-            // if enough time has passed, dump utxo, free memory, then load it again.
+            fout << cib.encode();
 
+#if 0
+            // if enough time has passed, dump utxo, free memory, then load it again.
             if (utxoDumpThrottler() == util::Log::show) {
                 auto utxoDumpFilename = std::filesystem::path(dataDir) / "utxo.dump";
                 LOG("storing UTXO...");
-                buv::storeUtxo(utxo, utxoDumpFilename);
+                buv::storeUtxo(*utxo, utxoDumpFilename);
                 // free the memory before loading
                 LOG("freeing UTXO memory...");
-                utxo = buv::Utxo();
+                utxo = nullptr;
+                LOG("waiting 5 seconds...");
+                std::this_thread::sleep_for(5s);
                 LOG("loading UTXO...");
+                utxo = std::make_unique<buv::Utxo>();
                 utxo = buv::loadUtxo(utxoDumpFilename);
                 LOG("loading UTXO done!");
             }
+#endif
         });
 }
