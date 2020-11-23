@@ -15,13 +15,32 @@ class ChangeAtBlockheight {
     uint32_t mBlockHeight{};
 
 public:
-    ChangeAtBlockheight(int64_t satoshi, uint32_t blockHeight);
-    [[nodiscard]] auto satoshi() const noexcept -> int64_t;
-    [[nodiscard]] auto blockHeight() const noexcept -> uint32_t;
+    constexpr ChangeAtBlockheight(int64_t satoshi, uint32_t blockHeight)
+        : mSatoshi(satoshi)
+        , mBlockHeight(blockHeight) {}
 
-    [[nodiscard]] auto operator<(ChangeAtBlockheight const& other) const noexcept -> bool;
-    [[nodiscard]] auto operator==(ChangeAtBlockheight const& other) const noexcept -> bool;
-    [[nodiscard]] auto operator!=(ChangeAtBlockheight const& other) const noexcept -> bool;
+    [[nodiscard]] constexpr auto satoshi() const noexcept -> int64_t {
+        return mSatoshi;
+    }
+
+    [[nodiscard]] constexpr auto blockHeight() const noexcept -> uint32_t {
+        return mBlockHeight;
+    }
+
+    [[nodiscard]] constexpr auto operator<(ChangeAtBlockheight const& other) const noexcept -> bool {
+        if (mSatoshi != other.mSatoshi) {
+            return mSatoshi < other.mSatoshi;
+        }
+        return mBlockHeight < other.mBlockHeight;
+    }
+
+    [[nodiscard]] constexpr auto operator==(ChangeAtBlockheight const& other) const noexcept -> bool {
+        return mSatoshi == other.mSatoshi && mBlockHeight == other.mBlockHeight;
+    }
+
+    [[nodiscard]] constexpr auto operator!=(ChangeAtBlockheight const& other) const noexcept -> bool {
+        return !(*this == other);
+    }
 };
 
 // Encodes & decodes block change data

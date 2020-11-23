@@ -32,7 +32,6 @@ void parallelToSequential(SequenceId sequenceSize,
 // Some TODO's:
 //
 // * Sequential processing blocks parallel processing. Don't do this.
-// * If sequential processing is slow, the container can grow unbounded. Limit growth by making workers wait.
 // * Main thread should also do work, instead of just join().
 void parallelToSequential(SequenceId sequenceSize,
                           ResourceId numResources,

@@ -10,8 +10,8 @@
 using namespace std::literals;
 
 TEST_CASE("parallel_to_sequential") {
-    static constexpr auto showLog = util::Log::show;
-    // static constexpr auto showLog = util::Log::hide;
+    // static constexpr auto showLog = util::Log::show;
+    static constexpr auto showLog = util::Log::hide;
 
     static constexpr auto numItems = util::SequenceId{100};
     auto hasIdProcessed = std::vector<uint8_t>(numItems.count(), 0);

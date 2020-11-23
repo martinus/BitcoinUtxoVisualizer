@@ -1,6 +1,8 @@
 #include <app/BlockEncoder.h>
 #include <app/Utxo.h>
+#include <app/loadAllBlockHashes.h>
 #include <util/HttpClient.h>
+#include <util/LogThrottler.h>
 #include <util/hex.h>
 #include <util/log.h>
 #include <util/parallelToSequential.h>
@@ -15,24 +17,7 @@
 
 using namespace std::literals;
 
-class Throttler {
-    std::chrono::nanoseconds mDelay{};
-    std::chrono::steady_clock::time_point mNextDeadline{};
-
-public:
-    explicit Throttler(std::chrono::nanoseconds delay)
-        : mDelay(delay) {}
-
-    // true if enough time has passed
-    [[nodiscard]] auto operator()() -> bool {
-        auto now = std::chrono::steady_clock::now();
-        if (now >= mNextDeadline) {
-            mNextDeadline = now + mDelay;
-            return true;
-        }
-        return false;
-    }
-};
+namespace {
 
 [[nodiscard]] auto integrateBlockData(simdjson::dom::element const& blockData, buv::Utxo& utxo) -> buv::ChangesInBlock {
     auto cib = buv::ChangesInBlock();
@@ -89,41 +74,14 @@ public:
     return cib;
 }
 
-[[nodiscard]] auto loadAllBlockHashes(std::unique_ptr<util::HttpClient> const& cli, std::string_view startBlock)
-    -> std::vector<std::string> {
-    auto allBlockHashes = std::vector<std::string>();
-    auto throttler = Throttler(1s);
-
-    auto jsonParser = simdjson::dom::parser();
-    auto block = startBlock;
-    while (true) {
-        auto json = cli->get("/rest/headers/2000/{}.json", block);
-        simdjson::dom::array data = jsonParser.parse(json);
-
-        // auto nextblockhash = std::string_view();
-        for (simdjson::dom::element e : data) {
-            allBlockHashes.emplace_back(e["hash"].get_string().value());
-        }
-        simdjson::dom::element last = data.at(data.size() - 1);
-        LOG_IF(throttler() ? util::Log::show : util::Log::hide, "got {} headers", allBlockHashes.size());
-
-        if (last["nextblockhash"].get(block) != 0U) {
-            // field not found, finished!
-            LOG("block headers done! got {} headers", allBlockHashes.size());
-            return allBlockHashes;
-        }
-
-        // it's ok to use std::string_view for block, because it is available until the parse() call, at which point we already
-        // have used it.
-    }
-}
-
 struct ResourceData {
     std::unique_ptr<util::HttpClient> cli{};
     std::string jsonData{};
     simdjson::dom::parser jsonParser{};
     simdjson::dom::element blockData{};
 };
+
+} // namespace
 
 TEST_CASE("utxo_to_change" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
@@ -141,14 +99,14 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto cli = util::HttpClient::create(bitcoinRpcUrl);
     auto jsonParser = simdjson::dom::parser();
 
-    auto allBlockHashes = loadAllBlockHashes(cli, startBlock);
+    auto allBlockHashes = buv::loadAllBlockHashes(cli, startBlock);
 
-    auto throttler = Throttler(1s);
+    auto throttler = util::LogThrottler(1s);
 
     auto fout = std::ofstream(std::filesystem::path(dataDir) / "changes.blk1", std::ios::binary | std::ios::out);
     auto utxo = buv::Utxo();
 
-    auto resources = std::vector<ResourceData>(20);
+    auto resources = std::vector<ResourceData>(100);
     for (auto& resource : resources) {
         resource.cli = util::HttpClient::create(bitcoinRpcUrl);
     }
@@ -156,6 +114,8 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     util::parallelToSequential(
         util::SequenceId{allBlockHashes.size()},
         util::ResourceId{resources.size()},
+        util::ConcurrentWorkers{std::thread::hardware_concurrency() * 2},
+
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             auto& res = resources[resourceId.count()];
             auto& hash = allBlockHashes[sequenceId.count()];
@@ -167,31 +127,11 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
 
             auto cib = integrateBlockData(res.blockData, utxo);
-            LOG_IF(throttler() ? util::Log::show : util::Log::hide,
-                   "height={}, bytes={}. utxo: {} entries",
-                   cib.blockHeight(),
-                   res.jsonData.size(),
-                   utxo.size());
+            LOG_IF(throttler(), "height={}, bytes={}. utxo: {} entries", cib.blockHeight(), res.jsonData.size(), utxo.size());
             fout << cib.encode();
+
+            // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
+            // still)
+            res.jsonData = std::string();
         });
-
-#if 0
-    while (true) {
-        auto json = cli->get("/rest/block/{}.json", nextblockhash);
-        simdjson::dom::element blockData = jsonParser.parse(json);
-        auto cib = integrateBlockData(blockData, utxo);
-        LOG_IF(throttler() ? util::Log::show : util::Log::hide,
-               "height={}, bytes={}. utxo: {} entries",
-               cib.blockHeight(),
-               json.size(),
-               utxo.size());
-
-        fout << cib.encode();
-
-        if (blockData["nextblockhash"].get(nextblockhash) != 0U) {
-            // last block, stop everything
-            break;
-        }
-    }
-#endif
 }

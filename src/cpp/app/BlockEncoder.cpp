@@ -7,35 +7,6 @@
 
 namespace buv {
 
-ChangeAtBlockheight::ChangeAtBlockheight(int64_t satoshi, uint32_t blockHeight)
-    : mSatoshi(satoshi)
-    , mBlockHeight(blockHeight) {}
-
-[[nodiscard]] auto ChangeAtBlockheight::satoshi() const noexcept -> int64_t {
-    return mSatoshi;
-}
-
-[[nodiscard]] auto ChangeAtBlockheight::blockHeight() const noexcept -> uint32_t {
-    return mBlockHeight;
-}
-
-[[nodiscard]] auto ChangeAtBlockheight::operator<(ChangeAtBlockheight const& other) const noexcept -> bool {
-    if (mSatoshi != other.mSatoshi) {
-        return mSatoshi < other.mSatoshi;
-    }
-    return mBlockHeight < other.mBlockHeight;
-}
-
-[[nodiscard]] auto ChangeAtBlockheight::operator==(ChangeAtBlockheight const& other) const noexcept -> bool {
-    return mSatoshi == other.mSatoshi && mBlockHeight == other.mBlockHeight;
-}
-
-[[nodiscard]] auto ChangeAtBlockheight::operator!=(ChangeAtBlockheight const& other) const noexcept -> bool {
-    return !(*this == other);
-}
-
-////
-
 void ChangesInBlock::beginBlock(uint32_t blockHeight) {
     mIsFinalized = false;
     mBlockHeight = blockHeight;

@@ -40,7 +40,7 @@ struct UtxoPerTx {
     robin_hood::unordered_flat_map<VOutNr, Satoshi> utxoPerTx{};
     uint32_t blockHeight{};
 };
-using Utxo = robin_hood::unordered_flat_map<TxId, UtxoPerTx>;
+using Utxo = robin_hood::unordered_node_map<TxId, UtxoPerTx>;
 
 auto loadUtxo(std::filesystem::path const& utxoFilename) -> Utxo;
 void safeUtxo(Utxo const& utxo);
