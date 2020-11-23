@@ -18,7 +18,7 @@ TEST_CASE("utxo") {
 
     LOG("");
 
-    using InnerMap = decltype(buv::UtxoPerTx::utxoPerTx);
+    using InnerMap = buv::UtxoPerTx;
     LOG("{} B for InnerMap::value_type", sizeof(InnerMap::value_type));
     LOG("{} B for InnerMap::key_type", sizeof(InnerMap::key_type));
     LOG("{} B for InnerMap::mapped_type", sizeof(InnerMap::mapped_type));

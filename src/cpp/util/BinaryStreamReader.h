@@ -32,6 +32,8 @@ public:
         // t might be uninitialized, but that's ok since we memcpy
         T t;
         std::memcpy(&t, mNow, ExpectedSize);
+
+        mNow += ExpectedSize;
         return t;
     }
 };

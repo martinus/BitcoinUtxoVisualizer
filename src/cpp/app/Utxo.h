@@ -7,6 +7,7 @@
 #include <cstring> // std::memcpy
 #include <filesystem>
 #include <string_view>
+#include <unordered_map>
 
 namespace buv {
 
@@ -29,21 +30,22 @@ public:
         std::memcpy(mData.data(), &x, NumBytes);
     }
 
-    inline auto value() noexcept -> int64_t {
+    [[nodiscard]] inline auto value() const noexcept -> int64_t {
         auto x = int64_t();
         std::memcpy(&x, mData.data(), NumBytes);
         return x;
     }
 };
 
-struct UtxoPerTx {
-    robin_hood::unordered_flat_map<VOutNr, Satoshi> utxoPerTx{};
-    uint32_t blockHeight{};
-};
+// special entry with VOutNr==65535 is blocksize
+using UtxoPerTx = robin_hood::unordered_flat_map<VOutNr, Satoshi>;
+// using UtxoPerTx = std::unordered_map<VOutNr, Satoshi>;
+
 using Utxo = robin_hood::unordered_node_map<TxId, UtxoPerTx>;
+// using Utxo = std::unordered_map<TxId, UtxoPerTx>;
 
 auto loadUtxo(std::filesystem::path const& utxoFilename) -> Utxo;
-void safeUtxo(Utxo const& utxo);
+void storeUtxo(Utxo const& utxo, std::filesystem::path const& utxoFilename);
 
 } // namespace buv
 
@@ -59,3 +61,16 @@ struct hash<buv::TxId> {
 };
 
 } // namespace robin_hood
+
+namespace std {
+
+template <>
+struct hash<buv::TxId> {
+    auto operator()(buv::TxId const& txid) const noexcept -> size_t {
+        auto h = size_t();
+        std::memcpy(&h, txid.data(), sizeof(size_t));
+        return h;
+    }
+};
+
+} // namespace std

@@ -13,6 +13,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <string_view>
 
 using namespace std::literals;
@@ -20,6 +21,8 @@ using namespace std::literals;
 namespace {
 
 [[nodiscard]] auto integrateBlockData(simdjson::dom::element const& blockData, buv::Utxo& utxo) -> buv::ChangesInBlock {
+    static constexpr auto blockHeightIdx = std::numeric_limits<uint16_t>::max();
+
     auto cib = buv::ChangesInBlock();
     cib.beginBlock(blockData["height"].get_uint64());
 
@@ -37,18 +40,23 @@ namespace {
                 if (unspentSourceOutputs == utxo.end()) {
                     throw std::runtime_error("DAMN! did not find txid");
                 }
-                auto voutAmount = unspentSourceOutputs->second.utxoPerTx.find(sourceVout);
-                if (voutAmount == unspentSourceOutputs->second.utxoPerTx.end()) {
+                auto voutAmount = unspentSourceOutputs->second.find(sourceVout);
+                if (voutAmount == unspentSourceOutputs->second.end()) {
                     throw std::runtime_error("DAMN! output not there");
                 }
 
                 // found an output that's spent! negative amount, because it's spent
-                cib.addChange(-voutAmount->second.value(), unspentSourceOutputs->second.blockHeight);
+                cib.addChange(-voutAmount->second.value(), unspentSourceOutputs->second[blockHeightIdx].value());
 
                 // remove the spent entry. If the whole tx is spent, remove it as well.
-                unspentSourceOutputs->second.utxoPerTx.erase(voutAmount);
-                if (unspentSourceOutputs->second.utxoPerTx.empty()) {
+                unspentSourceOutputs->second.erase(voutAmount);
+                if (unspentSourceOutputs->second.empty()) {
                     utxo.erase(unspentSourceOutputs);
+                } else {
+                    // if capacity has decreased a lot, free up memory by rehashing.
+                    if (unspentSourceOutputs->second.load_factor() < 0.1) {
+                        unspentSourceOutputs->second.rehash(0);
+                    }
                 }
             }
         } else {
@@ -57,14 +65,14 @@ namespace {
 
         // add all outputs from this transaction to the utxo
         auto txid = util::fromHex<16>(tx["txid"].get_c_str());
-        auto& blockheightAndUtxoPerTx = utxo[txid];
-        blockheightAndUtxoPerTx.blockHeight = cib.blockHeight();
+        auto& utxoPerTx = utxo[txid];
+        utxoPerTx[blockHeightIdx] = buv::Satoshi(cib.blockHeight());
 
         auto n = 0;
         for (auto const& vout : tx["vout"]) {
             auto sat = std::llround(vout["value"].get_double() * 100'000'000);
             auto satoshi = buv::Satoshi(sat);
-            blockheightAndUtxoPerTx.utxoPerTx[n] = satoshi;
+            utxoPerTx[n] = satoshi;
 
             cib.addChange(sat, cib.blockHeight());
             ++n;
@@ -102,6 +110,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto allBlockHashes = buv::loadAllBlockHashes(cli, startBlock);
 
     auto throttler = util::LogThrottler(1s);
+    auto utxoDumpThrottler = util::LogThrottler(5s);
 
     auto fout = std::ofstream(std::filesystem::path(dataDir) / "changes.blk1", std::ios::binary | std::ios::out);
     auto utxo = buv::Utxo();
@@ -133,5 +142,19 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)
             res.jsonData = std::string();
+
+            // if enough time has passed, dump utxo, free memory, then load it again.
+
+            if (utxoDumpThrottler() == util::Log::show) {
+                auto utxoDumpFilename = std::filesystem::path(dataDir) / "utxo.dump";
+                LOG("storing UTXO...");
+                buv::storeUtxo(utxo, utxoDumpFilename);
+                // free the memory before loading
+                LOG("freeing UTXO memory...");
+                utxo = buv::Utxo();
+                LOG("loading UTXO...");
+                utxo = buv::loadUtxo(utxoDumpFilename);
+                LOG("loading UTXO done!");
+            }
         });
 }
