@@ -12,8 +12,6 @@
 // signed integers are zigzag-encoded.
 namespace util {
 
-namespace {
-
 // 16/7 = 2.28 => maximum 3 btes for 16bit
 // 32/7 = 4.5 => maximum 5 bytes for 32bit
 // 64/7 = 9.14 => maximum 10 bytes for 64bit
@@ -30,7 +28,7 @@ template <typename UT>
 
     // byte 2
     b = *ptr++;
-    val |= (b & 127) << (7 * 1);
+    val |= (b & 127) << 7;
     if (b < 128) {
         return val;
     };
@@ -97,11 +95,9 @@ template <typename UT>
     return val;
 }
 
-} // namespace
-
 // writes varint into an internal buffer. Will be overwritten every call to encode()
 class VarInt {
-    std::array<uint8_t, 16> mData{};
+    std::array<uint8_t, 10> mData{};
 
 public:
     template <typename T>
