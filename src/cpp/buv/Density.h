@@ -54,6 +54,9 @@ public:
     }
 
     void change(uint32_t block_height, int64_t amount) {
+        if (amount == 0) {
+            return;
+        }
         if (amount == m_prev_amount && block_height == m_prev_block_height) {
             *m_last_data += amount >= 0 ? 1 : -1;
             return;
@@ -84,7 +87,7 @@ public:
     }
 
     void end_block(uint32_t block_height) {
-        if (block_height < 200'000) {
+        if (block_height < 657'000) {
             return;
         }
 
@@ -148,10 +151,10 @@ public:
 
         // temporarily set all updated pixels to white
         std::vector<uint8_t> previous_rgb_values(3 * m_pixel_set_with_history.size());
-        auto rgb_data = previous_rgb_values.data();
+        auto* rgb_data = previous_rgb_values.data();
 
         for (auto const& blockheight_pixelidx : m_pixel_set_with_history) {
-            auto rgb = m_density_to_image.rgb(blockheight_pixelidx.pixel_idx);
+            auto* rgb = m_density_to_image.rgb(blockheight_pixelidx.pixel_idx);
 
             rgb_data[0] = rgb[0];
             rgb_data[1] = rgb[1];
