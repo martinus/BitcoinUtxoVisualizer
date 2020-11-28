@@ -28,7 +28,7 @@ public:
         if (sentinel == m_pixel[pixel_idx]) {
             // not set: create entry
             m_pixel[pixel_idx] = m_blockheight_pixelidx.size();
-            m_blockheight_pixelidx.emplace_back(block_height, pixel_idx);
+            m_blockheight_pixelidx.emplace_back(BlockheightPixelidx{block_height, pixel_idx});
         } else {
             // pixel already set: update it with the max
             auto& pos = m_blockheight_pixelidx[m_pixel[pixel_idx]];

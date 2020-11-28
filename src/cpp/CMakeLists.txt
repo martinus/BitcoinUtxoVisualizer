@@ -8,11 +8,12 @@ target_sources_local(${PROJECT_NAME}
         app/check_blocks.cpp
         app/decode_change.cpp
         app/load_all_block_headers.cpp
-        app/Visualizer.cpp
         app/loadAllBlockHashes.cpp
         app/parse_block.cpp
         app/utxo_to_change.cpp
         app/Utxo.cpp
+        app/Visualizer.cpp
+        buv/SocketStream.cpp
         unit/BlockEncoderTest.cpp
         unit/HexTest.cpp
         unit/parallelToSequentialTest.cpp

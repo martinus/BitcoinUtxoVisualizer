@@ -28,5 +28,4 @@ TEST_CASE("visualizer" * doctest::skip()) {
 
     buv::forEachChange("../../out/blocks/changes.blk1", [&](buv::ChangesInBlock const& cib) {
     });
-    fmt::print("{} changes\n", numChanges);
 }

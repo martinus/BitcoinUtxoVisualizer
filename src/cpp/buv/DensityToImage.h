@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <ostream>
+#include <utility>
 #include <vector>
 
 namespace buv {
@@ -17,10 +18,8 @@ class DensityToImage {
 public:
     // initialize with background color
     // calculates the factor so that max_value is the last integer value that mapps to 255.
-    DensityToImage(size_t width, size_t height, size_t max_included_value, ColorMap const& colormap)
-        : m_colormap(colormap)
-        , m_width(width)
-        , m_height(height)
+    DensityToImage(size_t width, size_t height, size_t max_included_value, ColorMap colormap)
+        : m_colormap(std::move(colormap))
         , m_rgb(3 * width * height, 0)
         , m_fact(256.0 / std::log(max_included_value + 1))
         , m_max_included_value(max_included_value) {}
@@ -64,14 +63,12 @@ private:
     friend auto operator<<(std::ostream&, DensityToImage const&) -> std::ostream&;
 
     ColorMap const m_colormap;
-    size_t const m_width;
-    size_t const m_height;
     std::vector<uint8_t> m_rgb;
     double const m_fact;
     size_t const m_max_included_value;
 };
 
-auto operator<<(std::ostream& os, DensityToImage const& dti) -> std::ostream& {
+inline auto operator<<(std::ostream& os, DensityToImage const& dti) -> std::ostream& {
     os.write(reinterpret_cast<const char*>(dti.m_rgb.data()), dti.m_rgb.size());
     return os;
 }

@@ -22,8 +22,6 @@ public:
     Density(size_t width, size_t height, int64_t min_satoshi, int64_t max_satoshi, double min_blockid, double max_blockid)
         : m_width(width)
         , m_height(height)
-        , m_min_satoshi(min_satoshi)
-        , m_max_satoshi(max_satoshi)
         , m_fn_satoshi(std::log(max_satoshi), 0, std::log(min_satoshi), static_cast<double>(m_height))
         , m_fn_block(static_cast<double>(min_blockid), 0, static_cast<double>(max_blockid), static_cast<double>(m_width))
         , m_data(m_width * m_height, 0)
@@ -44,15 +42,15 @@ public:
             return;
         }
 
-        size_t pixel_x = static_cast<size_t>(m_fn_block(block_height));
+        auto pixel_x = static_cast<size_t>(m_fn_block(block_height));
         if (pixel_x > m_width - 1) {
             pixel_x = m_width - 1;
         }
 
         auto const famount = amount >= 0 ? amount : -amount;
-        size_t const pixel_y = truncate<size_t>(0, static_cast<size_t>(m_fn_satoshi(std::log(famount))), m_height - 1);
+        auto const pixel_y = truncate<size_t>(0, static_cast<size_t>(m_fn_satoshi(std::log(famount))), m_height - 1);
 
-        size_t const pixel_idx = pixel_y * m_width + pixel_x;
+        auto pixel_idx = pixel_y * m_width + pixel_x;
         static size_t max_pixel_idx = 0;
         if (pixel_idx > max_pixel_idx) {
             max_pixel_idx = pixel_idx;
@@ -133,7 +131,7 @@ public:
 
         // temporarily set all updated pixels to white
         std::vector<uint8_t> previous_rgb_values(3 * m_pixel_set_with_history.size());
-        auto previous_rgb_data = previous_rgb_values.data();
+        auto* previous_rgb_data = previous_rgb_values.data();
 
         int const max_hist = static_cast<int>(m_pixel_set_with_history.max_history());
         for (auto const& blockheight_pixelidx : m_pixel_set_with_history) {
@@ -142,7 +140,7 @@ public:
             int const fact = (2 * x + max_hist) / 3;
             int const opposite = (max_hist - x) / 170; // 255 * 2 / 3 = 170
 
-            auto rgb = m_density_to_image.rgb(blockheight_pixelidx.pixel_idx);
+            auto* rgb = m_density_to_image.rgb(blockheight_pixelidx.pixel_idx);
             *previous_rgb_data++ = rgb[0];
             *previous_rgb_data++ = rgb[1];
             *previous_rgb_data++ = rgb[2];
@@ -171,7 +169,7 @@ public:
     }
 
     // saves current status of the image as a PPM file
-    void save_image_ppm(DensityToImage& toi, std::string filename) {
+    void save_image_ppm(DensityToImage& toi, std::string const& filename) const {
         // see http://netpbm.sourceforge.net/doc/ppm.html
         std::ofstream fout(filename, std::ios::binary);
         fout << "P6\n" << m_width << " " << m_height << "\n" << 255 << "\n" << toi;
@@ -180,8 +178,6 @@ public:
 private:
     size_t const m_width;
     size_t const m_height;
-    int64_t const m_min_satoshi;
-    int64_t const m_max_satoshi;
     LinearFunction const m_fn_satoshi;
     LinearFunction const m_fn_block;
     std::vector<size_t> m_data;
@@ -193,4 +189,4 @@ private:
     uint32_t m_current_block_height;
 };
 
-} // namespace bv
+} // namespace buv
