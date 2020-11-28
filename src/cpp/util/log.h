@@ -42,6 +42,7 @@ void log(std::string_view filename, int line, char const* format, Args&&... args
     fmt::print("{:8.3f} {:>30}({:3}) | ", sec.count(), filename, line);
     fmt::print(format, std::forward<Args>(args)...);
     fmt::print("\n");
+    fflush(stdout);
 }
 
 } // namespace util

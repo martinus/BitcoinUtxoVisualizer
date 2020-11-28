@@ -14,18 +14,26 @@ TEST_CASE("visualizer" * doctest::skip()) {
     // size_t const height = 2160;
     // size_t const max_included_density = 444;
 
-    size_t const width = 2560;
-    size_t const height = 1440;
-    size_t const max_included_density = 1000;
+    auto cfg = buv::Density::Cfg();
+    //cfg.pixelWidth = 2560;
+    //cfg.pixelHeight = 1440;
+    cfg.pixelWidth = 1600;
+    cfg.pixelHeight = 1200;
+    cfg.minSatoshi = 1;
+    cfg.maxSatoshi = int64_t(10'000) * int64_t(100'000'000);
+    cfg.minBlockHeight = 0;
+    cfg.maxBlockHeight = 657'000;
+    auto density = buv::Density(cfg);
 
-    auto density = buv::Density(width,                   // width
-                                height,                  // height
-                                1,                       // minimum satoshi
-                                10'000ULL * 100'000'000, // max satoshi,
-                                0,                       // minimum block height
-                                550'000                  // maximum block height
-    );
+    auto throttler = util::LogThrottler(1000ms);
 
     buv::forEachChange("../../out/blocks/changes.blk1", [&](buv::ChangesInBlock const& cib) {
+        LOG_IF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
+
+        density.begin_block(cib.blockHeight());
+        for (auto const& change : cib.changeAtBlockheights()) {
+            density.change(change.blockHeight(), change.satoshi());
+        }
+        density.end_block(cib.blockHeight());
     });
 }
