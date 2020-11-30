@@ -6,6 +6,7 @@ target_sources_local(${PROJECT_NAME}
     PRIVATE
         app/BlockEncoder.cpp
         app/check_blocks.cpp
+        app/Chunk.cpp
         app/decode_change.cpp
         app/load_all_block_headers.cpp
         app/loadAllBlockHashes.cpp
@@ -16,6 +17,7 @@ target_sources_local(${PROJECT_NAME}
         app/Visualizer.cpp
         buv/SocketStream.cpp
         unit/BlockEncoderTest.cpp
+        unit/ChunkTest.cpp
         unit/HexTest.cpp
         unit/parallelToSequentialTest.cpp
         unit/UtxoTest.cpp

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring> // std::memcpy
 #include <filesystem>
+#include <list>
 #include <map>
 #include <string_view>
 #include <unordered_map>
