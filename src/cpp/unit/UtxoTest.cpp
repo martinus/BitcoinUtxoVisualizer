@@ -10,7 +10,7 @@ static_assert(sizeof(buv::Satoshi) == sizeof(uint64_t));
 static_assert(sizeof(robin_hood::pair<buv::VOutNr, buv::Satoshi>) == sizeof(buv::VOutNr) + sizeof(buv::Satoshi), "no padding");
 
 // creates the data structure
-TEST_CASE("utxo") {
+TEST_CASE("utxo" * doctest::skip()) {
     auto utxo = buv::Utxo();
     LOG("{} B for buv::Utxo::value_type", sizeof(buv::Utxo::value_type));
     LOG("{} B for buv::Utxo::key_type", sizeof(buv::Utxo::key_type));

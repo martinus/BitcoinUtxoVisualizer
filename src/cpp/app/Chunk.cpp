@@ -86,8 +86,8 @@ auto ChunkStore::remove(uint16_t vout, Chunk* c) -> std::pair<int64_t, Chunk*> {
     }
 
     auto lastIdx = lastChunk->size() - 1;
-    auto retVal = std::exchange(foundChunk->voutSatoshi()[foundIdx], lastChunk->voutSatoshi()[lastIdx]);
-    lastChunk->voutSatoshi()[lastIdx] = {};
+    auto retVal = std::exchange(foundChunk->voutSatoshi(foundIdx), lastChunk->voutSatoshi(lastIdx));
+    lastChunk->voutSatoshi(lastIdx) = {};
     if (lastChunk->empty()) {
         // lastChunk is now empty, put it back into the store.
         if (prevChunk != nullptr) {

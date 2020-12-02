@@ -53,6 +53,10 @@ public:
     [[nodiscard]] inline auto empty() const noexcept -> bool {
         return mVout == 0xFFFF;
     }
+
+    [[nodiscard]] auto operator==(VoutSatoshi const& other) const -> bool {
+        return mVout == other.mVout && mSatoshi == other.mSatoshi;
+    }
 };
 
 // Chunk contains multiple VoutSatoshi, and links to the next one.
@@ -61,8 +65,19 @@ class Chunk {
     std::array<VoutSatoshi, 12> mVoutSatoshi{};
 
 public:
-    [[nodiscard]] auto voutSatoshi() noexcept -> std::array<VoutSatoshi, 12>& {
+    [[nodiscard]] auto voutSatoshi() -> std::array<VoutSatoshi, 12>& {
         return mVoutSatoshi;
+    }
+    [[nodiscard]] auto voutSatoshi() const -> std::array<VoutSatoshi, 12> const& {
+        return mVoutSatoshi;
+    }
+
+    [[nodiscard]] auto voutSatoshi(size_t idx) -> VoutSatoshi& {
+        return mVoutSatoshi[idx];
+    }
+
+    [[nodiscard]] auto voutSatoshi(size_t idx) const -> VoutSatoshi const& {
+        return mVoutSatoshi[idx];
     }
 
     void clear() {
@@ -71,7 +86,7 @@ public:
     }
 
     [[nodiscard]] auto full() const noexcept -> bool {
-        return mVoutSatoshi.back().empty();
+        return !mVoutSatoshi.back().empty();
     }
 
     [[nodiscard]] auto empty() const noexcept -> bool {
