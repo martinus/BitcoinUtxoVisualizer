@@ -13,9 +13,10 @@ auto ChunkStore::takeFromStore() -> Chunk* {
         mFreeList = &bulk[0];
     }
 
-    // get a chunk from the freelist
+    // get a chunk from the freelist, and unlink it
     auto* freeChunk = mFreeList;
-    mFreeList = mFreeList->next();
+    mFreeList = freeChunk->next();
+    freeChunk->next(nullptr);
     return freeChunk;
 }
 
