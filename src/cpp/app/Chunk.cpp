@@ -3,6 +3,14 @@
 
 namespace buv {
 
+auto ChunkStore::numFreeChunks() const -> size_t {
+    return mNumFreeChunks;
+}
+
+auto ChunkStore::numAllocatedChunks() const -> size_t {
+    return mStore.size() * NumChunksInBulk;
+}
+
 auto ChunkStore::takeFromStore() -> Chunk* {
     // If freelist is empty, allocate a new array, interlink everything, and put into freelist
     if (mFreeList == nullptr) {

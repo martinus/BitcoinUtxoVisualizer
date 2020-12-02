@@ -1,8 +1,10 @@
 #include <app/Chunk.h>
 
 #include <doctest.h>
+#include <nanobench.h>
 
 #include <tuple>
+#include <unordered_map>
 
 TEST_CASE("chunk_single") {
     auto chunkStore = buv::ChunkStore();
@@ -29,4 +31,41 @@ TEST_CASE("chunk_single") {
     std::tie(satoshi, newChunk) = chunkStore.remove(13, chunk);
     REQUIRE(newChunk == nullptr);
     REQUIRE(satoshi == 4444);
+}
+
+TEST_CASE("chunk_random") {
+    auto voutAndSatoshi = std::vector<buv::VoutSatoshi>();
+    for (uint16_t i = 0; i < 14; ++i) {
+        voutAndSatoshi.emplace_back(i, i * 1'000'000);
+    }
+
+    // now fill up chunks
+    auto chunkStore = buv::ChunkStore();
+    buv::Chunk* baseChunk = nullptr;
+    buv::Chunk* lastChunk = nullptr;
+    for (auto const& vs : voutAndSatoshi) {
+        lastChunk = chunkStore.insert(vs.vout(), vs.satoshi(), lastChunk);
+        if (baseChunk == nullptr) {
+            baseChunk = lastChunk;
+        }
+    }
+
+    // now that we have plenty of data, remove until empty and check that we get exactly the same result as the vector.
+    buv::Chunk* newBaseChunk = baseChunk;
+    auto rng = ankerl::nanobench::Rng(123);
+    while (!voutAndSatoshi.empty()) {
+        auto idx = rng.bounded(voutAndSatoshi.size());
+        auto removed = voutAndSatoshi[idx];
+        voutAndSatoshi[idx] = voutAndSatoshi.back();
+        voutAndSatoshi.pop_back();
+
+        auto satoshi = int64_t();
+        std::tie(satoshi, newBaseChunk) = chunkStore.remove(removed.vout(), newBaseChunk);
+        if (voutAndSatoshi.empty()) {
+            REQUIRE(newBaseChunk == nullptr);
+        } else {
+            REQUIRE(newBaseChunk == baseChunk);
+        }
+        REQUIRE(satoshi == removed.satoshi());
+    }
 }

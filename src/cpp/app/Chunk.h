@@ -127,8 +127,10 @@ public:
 // Holds lots of bulk data in a list, and chunks in a freelist. On VoutSatoshi const& vsinsert, potentially new Chunks are
 // allocated and put into the freelist. On remove chunks are put into the freelist.
 class ChunkStore {
-    std::list<std::array<Chunk, 1024 * 1024 / sizeof(Chunk)>> mStore{};
+    static constexpr auto NumChunksInBulk = 1024 * 1024 / sizeof(Chunk);
+    std::list<std::array<Chunk, NumChunksInBulk>> mStore{};
     Chunk* mFreeList = nullptr;
+    size_t mNumFreeChunks = 0;
 
 public:
     // Inserts vs into the chunk. If c is full, it gets a new chunk from the store links to it from c.
@@ -139,6 +141,12 @@ public:
     // entry with the last enry.
     // @return The removed satoshi value, and either c or nullptr if that was the last element
     auto remove(uint16_t vout, Chunk* c) -> std::pair<int64_t, Chunk*>;
+
+    // Number of entries in the freelist. O(1) operation
+    [[nodiscard]] auto numFreeChunks() const -> size_t;
+
+    // Number of total chunks allocated. O(1) operation
+    [[nodiscard]] auto numAllocatedChunks() const -> size_t;
 
 private:
     // Gets a chunk from the store. This never fails, it will allocate if none is yet available.
