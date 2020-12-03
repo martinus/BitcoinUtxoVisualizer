@@ -46,15 +46,15 @@ public:
         return x;
     }
 
-    [[nodiscard]] inline auto vout() const noexcept -> uint16_t {
+    [[nodiscard]] constexpr auto vout() const noexcept -> uint16_t {
         return mVout;
     }
 
-    [[nodiscard]] inline auto empty() const noexcept -> bool {
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool {
         return mVout == 0xFFFF;
     }
 
-    [[nodiscard]] auto operator==(VoutSatoshi const& other) const -> bool {
+    [[nodiscard]] constexpr auto operator==(VoutSatoshi const& other) const -> bool {
         return mVout == other.mVout && mSatoshi == other.mSatoshi;
     }
 };
@@ -66,18 +66,18 @@ class Chunk {
     std::array<VoutSatoshi, NumVoutSathosiPerChunk> mVoutSatoshi{};
 
 public:
-    [[nodiscard]] auto voutSatoshi() -> std::array<VoutSatoshi, 12>& {
+    [[nodiscard]] constexpr auto voutSatoshi() -> std::array<VoutSatoshi, 12>& {
         return mVoutSatoshi;
     }
-    [[nodiscard]] auto voutSatoshi() const -> std::array<VoutSatoshi, 12> const& {
+    [[nodiscard]] constexpr auto voutSatoshi() const -> std::array<VoutSatoshi, 12> const& {
         return mVoutSatoshi;
     }
 
-    [[nodiscard]] auto voutSatoshi(size_t idx) -> VoutSatoshi& {
+    [[nodiscard]] constexpr auto voutSatoshi(size_t idx) -> VoutSatoshi& {
         return mVoutSatoshi[idx];
     }
 
-    [[nodiscard]] auto voutSatoshi(size_t idx) const -> VoutSatoshi const& {
+    [[nodiscard]] constexpr auto voutSatoshi(size_t idx) const -> VoutSatoshi const& {
         return mVoutSatoshi[idx];
     }
 
@@ -85,21 +85,21 @@ public:
         return NumVoutSathosiPerChunk;
     }
 
-    void clear() {
+    constexpr void clear() {
         mVoutSatoshi = {};
         mNextChunk = nullptr;
     }
 
-    [[nodiscard]] auto full() const noexcept -> bool {
+    [[nodiscard]] constexpr auto full() const noexcept -> bool {
         return !mVoutSatoshi.back().empty();
     }
 
-    [[nodiscard]] auto empty() const noexcept -> bool {
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool {
         return mVoutSatoshi.front().empty();
     }
 
     // finds an entry with fout, returns index or numeric_limits<size_t>::max() if not found. Does NOT follow next().
-    [[nodiscard]] auto find(uint16_t vout) const -> size_t {
+    [[nodiscard]] constexpr auto find(uint16_t vout) const -> size_t {
         for (auto i = size_t(); i < mVoutSatoshi.size(); ++i) {
             if (mVoutSatoshi[i].empty()) {
                 return std::numeric_limits<size_t>::max();
@@ -112,7 +112,7 @@ public:
     }
 
     // number of elements that are taken
-    [[nodiscard]] auto size() const -> size_t {
+    [[nodiscard]] constexpr auto size() const -> size_t {
         auto s = mVoutSatoshi.size();
         while (s != 0 && mVoutSatoshi[s - 1].empty()) {
             --s;
@@ -120,11 +120,11 @@ public:
         return s;
     }
 
-    [[nodiscard]] auto next() const -> Chunk* {
+    [[nodiscard]] constexpr auto next() const -> Chunk* {
         return mNextChunk;
     }
 
-    void next(Chunk* c) {
+    constexpr void next(Chunk* c) {
         mNextChunk = c;
     }
 };
