@@ -8,7 +8,11 @@ auto ChunkStore::numFreeChunks() const -> size_t {
 }
 
 auto ChunkStore::numAllocatedChunks() const -> size_t {
-    return mStore.size() * NumChunksInBulk;
+    return mStore.size() * NumChunksPerBulk;
+}
+
+auto ChunkStore::numChunksPerBulk() -> size_t {
+    return NumChunksPerBulk;
 }
 
 auto ChunkStore::takeFromStore() -> Chunk* {
@@ -19,9 +23,11 @@ auto ChunkStore::takeFromStore() -> Chunk* {
             bulk[i].next(&bulk[i + 1]);
         }
         mFreeList = &bulk[0];
+        mNumFreeChunks += bulk.size();
     }
 
     // get a chunk from the freelist, and unlink it
+    --mNumFreeChunks;
     auto* freeChunk = mFreeList;
     mFreeList = freeChunk->next();
     freeChunk->next(nullptr);
@@ -29,6 +35,7 @@ auto ChunkStore::takeFromStore() -> Chunk* {
 }
 
 void ChunkStore::putIntoStore(Chunk* c) {
+    ++mNumFreeChunks;
     c->clear();
     c->next(mFreeList);
     mFreeList = c;
@@ -69,43 +76,46 @@ auto ChunkStore::insert(uint16_t vout, int64_t satoshi, Chunk* c) -> Chunk* {
 // Removes the entry in the chunklist with the given vout. Might put a free chunk back into the store. Replaces the removed
 // entry with the last enry.
 // @return The removed satoshi value, and nullptreither the chunk or nullptr if the chunk was empty.
-auto ChunkStore::remove(uint16_t vout, Chunk* c) -> std::pair<int64_t, Chunk*> {
-    auto* foundChunk = (Chunk*){};
+auto ChunkStore::remove(uint16_t vout, Chunk* const c) -> std::pair<int64_t, Chunk*> {
+    Chunk* preFoundChunk = nullptr;
+    auto* foundChunk = c;
     auto foundIdx = size_t();
-    while (c != nullptr) {
-        foundIdx = c->find(vout);
+    while (foundChunk != nullptr) {
+        foundIdx = foundChunk->find(vout);
         if (foundIdx != std::numeric_limits<size_t>::max()) {
-            // found the entry!
-            foundChunk = c;
             break;
         }
-        c = c->next();
+        preFoundChunk = foundChunk;
+        foundChunk = foundChunk->next();
     }
-
     if (foundChunk == nullptr) {
         throw std::runtime_error("could not find vout!");
     }
 
-    // forward to last entry that contains something
+    // Now we have preFoundChunk, foundChunk, foundIdx. Do the same for lastChunk
+
+    auto* preLastChunk = preFoundChunk;
     auto* lastChunk = foundChunk;
-    auto* prevChunk = (Chunk*){};
     while (lastChunk->next() != nullptr) {
-        prevChunk = lastChunk;
+        preLastChunk = lastChunk;
         lastChunk = lastChunk->next();
     }
-
     auto lastIdx = lastChunk->size() - 1;
+
+    // Now we have preLastChunk, lastChunk, lastIdx. Everything we need to replace and remove!
+
     auto retVal = std::exchange(foundChunk->voutSatoshi(foundIdx), lastChunk->voutSatoshi(lastIdx));
     lastChunk->voutSatoshi(lastIdx) = {};
+
+    // if lastChunk is empty, unlink it
     if (lastChunk->empty()) {
-        // lastChunk is now empty, put it back into the store.
-        if (prevChunk != nullptr) {
-            prevChunk->next(nullptr);
+        if (preLastChunk != nullptr) {
+            preLastChunk->next(nullptr);
         }
         putIntoStore(lastChunk);
         if (lastChunk == c) {
             // whole list is empty!
-            return std::make_pair(retVal.satoshi(), nullptr);
+            return std::pair<int64_t, Chunk*>(retVal.satoshi(), nullptr);
         }
     }
 

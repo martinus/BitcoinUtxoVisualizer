@@ -1,4 +1,5 @@
 #include <app/Chunk.h>
+#include <util/log.h>
 
 #include <doctest.h>
 #include <nanobench.h>
@@ -33,14 +34,21 @@ TEST_CASE("chunk_single") {
     REQUIRE(satoshi == 4444);
 }
 
+[[nodiscard]] auto numChunksRequired(size_t numVoutSatoshi) -> size_t {
+    return (numVoutSatoshi + buv::Chunk::numVoutSatoshiPerChunk() - 1) / buv::Chunk::numVoutSatoshiPerChunk();
+}
+
 TEST_CASE("chunk_random") {
     auto voutAndSatoshi = std::vector<buv::VoutSatoshi>();
-    for (uint16_t i = 0; i < 14; ++i) {
+    for (uint16_t i = 0; i < 10000; ++i) {
         voutAndSatoshi.emplace_back(i, i * 1'000'000);
     }
 
     // now fill up chunks
     auto chunkStore = buv::ChunkStore();
+    REQUIRE(chunkStore.numAllocatedChunks() == 0);
+    REQUIRE(chunkStore.numFreeChunks() == 0);
+
     buv::Chunk* baseChunk = nullptr;
     buv::Chunk* lastChunk = nullptr;
     for (auto const& vs : voutAndSatoshi) {
@@ -49,6 +57,9 @@ TEST_CASE("chunk_random") {
             baseChunk = lastChunk;
         }
     }
+    REQUIRE(lastChunk != baseChunk);
+    REQUIRE(chunkStore.numAllocatedChunks() == chunkStore.numChunksPerBulk());
+    REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == numChunksRequired(voutAndSatoshi.size()));
 
     // now that we have plenty of data, remove until empty and check that we get exactly the same result as the vector.
     buv::Chunk* newBaseChunk = baseChunk;
@@ -61,6 +72,13 @@ TEST_CASE("chunk_random") {
 
         auto satoshi = int64_t();
         std::tie(satoshi, newBaseChunk) = chunkStore.remove(removed.vout(), newBaseChunk);
+
+        LOG("{:>10} total, {:>10} free ({:4.1f}%)",
+            chunkStore.numAllocatedChunks(),
+            chunkStore.numFreeChunks(),
+            100.0 * chunkStore.numFreeChunks() / chunkStore.numAllocatedChunks());
+        REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == numChunksRequired(voutAndSatoshi.size()));
+
         if (voutAndSatoshi.empty()) {
             REQUIRE(newBaseChunk == nullptr);
         } else {

@@ -61,8 +61,9 @@ public:
 
 // Chunk contains multiple VoutSatoshi, and links to the next one.
 class Chunk {
+    static constexpr auto NumVoutSathosiPerChunk = 12;
     Chunk* mNextChunk = nullptr;
-    std::array<VoutSatoshi, 12> mVoutSatoshi{};
+    std::array<VoutSatoshi, NumVoutSathosiPerChunk> mVoutSatoshi{};
 
 public:
     [[nodiscard]] auto voutSatoshi() -> std::array<VoutSatoshi, 12>& {
@@ -78,6 +79,10 @@ public:
 
     [[nodiscard]] auto voutSatoshi(size_t idx) const -> VoutSatoshi const& {
         return mVoutSatoshi[idx];
+    }
+
+    [[nodiscard]] static constexpr auto numVoutSatoshiPerChunk() -> size_t {
+        return NumVoutSathosiPerChunk;
     }
 
     void clear() {
@@ -127,8 +132,8 @@ public:
 // Holds lots of bulk data in a list, and chunks in a freelist. On VoutSatoshi const& vsinsert, potentially new Chunks are
 // allocated and put into the freelist. On remove chunks are put into the freelist.
 class ChunkStore {
-    static constexpr auto NumChunksInBulk = 1024 * 1024 / sizeof(Chunk);
-    std::list<std::array<Chunk, NumChunksInBulk>> mStore{};
+    static constexpr auto NumChunksPerBulk = 1024 * 1024 / sizeof(Chunk);
+    std::list<std::array<Chunk, NumChunksPerBulk>> mStore{};
     Chunk* mFreeList = nullptr;
     size_t mNumFreeChunks = 0;
 
@@ -147,6 +152,9 @@ public:
 
     // Number of total chunks allocated. O(1) operation
     [[nodiscard]] auto numAllocatedChunks() const -> size_t;
+
+    // Number of chunks in one bulk allocation
+    [[nodiscard]] static auto numChunksPerBulk() -> size_t;
 
 private:
     // Gets a chunk from the store. This never fails, it will allocate if none is yet available.
