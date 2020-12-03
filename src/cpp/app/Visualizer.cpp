@@ -32,7 +32,7 @@ TEST_CASE("visualizer" * doctest::skip()) {
     auto throttler = util::LogThrottler(1000ms);
 
     buv::forEachChange("../../out/blocks/changes.blk1", [&](buv::ChangesInBlock const& cib) {
-        LOG_IF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
+        LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
 
         density.begin_block(cib.blockHeight());
         // auto maxBlockAmount = int64_t(0);

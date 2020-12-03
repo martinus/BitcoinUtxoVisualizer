@@ -73,10 +73,10 @@ TEST_CASE("chunk_random") {
         auto satoshi = int64_t();
         std::tie(satoshi, newBaseChunk) = chunkStore.remove(removed.vout(), newBaseChunk);
 
-        LOG("{:>10} total, {:>10} free ({:4.1f}%)",
-            chunkStore.numAllocatedChunks(),
-            chunkStore.numFreeChunks(),
-            100.0 * chunkStore.numFreeChunks() / chunkStore.numAllocatedChunks());
+        NOLOG("{:>10} total, {:>10} free ({:4.1f}%)",
+              chunkStore.numAllocatedChunks(),
+              chunkStore.numFreeChunks(),
+              100.0 * chunkStore.numFreeChunks() / chunkStore.numAllocatedChunks());
         REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == numChunksRequired(voutAndSatoshi.size()));
 
         if (voutAndSatoshi.empty()) {

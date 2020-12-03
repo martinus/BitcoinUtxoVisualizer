@@ -140,7 +140,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
             auto cib = integrateBlockData(res.blockData, *utxo);
 
-            LOG_IF(throttler(), "height={}, bytes={}. utxo: {} entries", cib.blockHeight(), res.jsonData.size(), utxo->size());
+            LOGIF(throttler(), "height={}, bytes={}. utxo: {} entries", cib.blockHeight(), res.jsonData.size(), utxo->size());
 
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)

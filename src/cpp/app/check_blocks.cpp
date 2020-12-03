@@ -53,7 +53,7 @@ TEST_CASE("check_blocks" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
             auto& hash = allBlockHashes[sequenceId.count()];
 
-            LOG_IF(throttler(), "block {} at {}, resource {}", hash, sequenceId.count(), resourceId.count());
+            LOGIF(throttler(), "block {} at {}, resource {}", hash, sequenceId.count(), resourceId.count());
 
 #if 0
 

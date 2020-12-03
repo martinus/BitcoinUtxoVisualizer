@@ -29,7 +29,7 @@ namespace buv {
             allBlockHashes.emplace_back(e["hash"].get_string().value());
         }
         simdjson::dom::element last = data.at(data.size() - 1);
-        LOG_IF(throttler(), "got {} headers", allBlockHashes.size());
+        LOGIF(throttler(), "got {} headers", allBlockHashes.size());
 
         if (last["nextblockhash"].get(block) != 0U) {
             // field not found, finished!

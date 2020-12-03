@@ -20,11 +20,16 @@ static std::chrono::steady_clock::time_point sStartTime = std::chrono::steady_cl
     } while (0)
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define LOG_IF(showHide, ...)                             \
+#define LOGIF(showHide, ...)                              \
     do {                                                  \
         if (::util::Log::show == (showHide)) {            \
             ::util::log(__FILE__, __LINE__, __VA_ARGS__); \
         }                                                 \
+    } while (0)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define NOLOG(...) \
+    do {           \
     } while (0)
 
 // Simple logging with a global lock

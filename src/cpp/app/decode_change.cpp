@@ -17,7 +17,7 @@ TEST_CASE("decode_change" * doctest::skip()) {
     auto totalChanges = size_t();
 
     buv::forEachChange("../../out/blocks/changes.blk1", [&](buv::ChangesInBlock const& cib) {
-        LOG_IF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
+        LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
         REQUIRE(cib.blockHeight() == expectedBlockHeight);
         ++expectedBlockHeight;
 
