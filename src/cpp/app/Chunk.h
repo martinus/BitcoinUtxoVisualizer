@@ -132,7 +132,7 @@ public:
 // Holds lots of bulk data in a list, and chunks in a freelist. On VoutSatoshi const& vsinsert, potentially new Chunks are
 // allocated and put into the freelist. On remove chunks are put into the freelist.
 class ChunkStore {
-    static constexpr auto NumChunksPerBulk = 1024 * 1024 / sizeof(Chunk);
+    static constexpr auto NumChunksPerBulk = 100 * 1024 * 1024 / sizeof(Chunk);
     std::list<std::array<Chunk, NumChunksPerBulk>> mStore{};
     Chunk* mFreeList = nullptr;
     size_t mNumFreeChunks = 0;
