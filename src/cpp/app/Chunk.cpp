@@ -1,4 +1,9 @@
 #include "Chunk.h"
+
+#include <util/log.h>
+
+#include <fmt/format.h>
+
 #include <stdexcept>
 
 namespace buv {
@@ -22,7 +27,7 @@ auto ChunkStore::numAllocatedBulks() const -> size_t {
 auto ChunkStore::takeFromStore() -> Chunk* {
     // If freelist is empty, allocate a new array, interlink everything, and put into freelist
     if (mFreeList == nullptr) {
-        auto bulk = mStore.emplace_back();
+        auto& bulk = mStore.emplace_back();
         for (size_t i = 0; i < bulk.size() - 1; ++i) {
             bulk[i].next(&bulk[i + 1]);
         }
@@ -35,10 +40,12 @@ auto ChunkStore::takeFromStore() -> Chunk* {
     auto* freeChunk = mFreeList;
     mFreeList = freeChunk->next();
     freeChunk->next(nullptr);
+    // LOG("take {}", static_cast<void*>(freeChunk));
     return freeChunk;
 }
 
 void ChunkStore::putIntoStore(Chunk* c) {
+    // LOG("put {}", static_cast<void*>(c));
     ++mNumFreeChunks;
     c->clear();
     c->next(mFreeList);
@@ -68,6 +75,7 @@ auto ChunkStore::insert(uint16_t vout, int64_t satoshi, Chunk* c) -> Chunk* {
     // now c has place for one entry, insert it at the back
     for (auto& voutSatoshi : c->voutSatoshi()) {
         if (voutSatoshi.empty()) {
+            // LOG("inserted vout {} into chunk {}", vout, static_cast<void*>(c));
             voutSatoshi = {vout, satoshi};
             return c;
         }
@@ -81,6 +89,8 @@ auto ChunkStore::insert(uint16_t vout, int64_t satoshi, Chunk* c) -> Chunk* {
 // entry with the last enry.
 // @return The removed satoshi value, and nullptreither the chunk or nullptr if the chunk was empty.
 auto ChunkStore::remove(uint16_t vout, Chunk* const c) -> std::pair<int64_t, Chunk*> {
+    // LOG("vout={}, chunk={}", vout, static_cast<void*>(c));
+
     Chunk* preFoundChunk = nullptr;
     auto* foundChunk = c;
     auto foundIdx = size_t();
@@ -93,7 +103,14 @@ auto ChunkStore::remove(uint16_t vout, Chunk* const c) -> std::pair<int64_t, Chu
         foundChunk = foundChunk->next();
     }
     if (foundChunk == nullptr) {
-        throw std::runtime_error("could not find vout!");
+        for (size_t i = 0; i < buv::Chunk::numVoutSatoshiPerChunk(); ++i) {
+            LOG("Chunk {}[{}]: vout={}, satoshi={}",
+                static_cast<void*>(c),
+                i,
+                c->voutSatoshi(i).vout(),
+                c->voutSatoshi(i).satoshi());
+        }
+        throw std::runtime_error(fmt::format("could not find vout {} in chunk {}", vout, static_cast<void*>(c)));
     }
 
     // Now we have preFoundChunk, foundChunk, foundIdx. Do the same for lastChunk

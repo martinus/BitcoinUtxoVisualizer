@@ -35,6 +35,7 @@ namespace {
                 auto sourceTxid = util::fromHex<buv::txidPrefixSize>(vin["txid"].get_c_str());
                 auto sourceVout = static_cast<uint16_t>(vin["vout"].get_uint64());
 
+                // LOG("remove {} {}", util::toHex(sourceTxid), sourceVout);
                 auto [satoshi, blockHeight] = utxo.remove(sourceTxid, sourceVout);
 
                 // found an output that's spent! negative amount, because it's spent
@@ -51,6 +52,7 @@ namespace {
         auto n = 0;
         for (auto const& vout : tx["vout"]) {
             auto sat = std::llround(vout["value"].get_double() * 100'000'000);
+            // LOG("insert {} {}", util::toHex(txid), n);
             inserter.insert(n, sat);
             cib.addChange(sat, cib.blockHeight());
             ++n;
@@ -71,7 +73,7 @@ struct ResourceData {
 
 TEST_CASE("utxo_to_change" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
-    static constexpr auto dataDir = "../../out/blocks";
+    static constexpr auto dataDir = "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer";
 
     // genesis block, height 0
     static constexpr auto startBlock = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";

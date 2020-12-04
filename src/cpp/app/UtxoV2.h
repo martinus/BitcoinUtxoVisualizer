@@ -1,6 +1,7 @@
 #pragma once
 
 #include <app/Chunk.h>
+#include <util/log.h>
 
 #include <fmt/core.h>
 #include <robin_hood.h>
@@ -30,6 +31,19 @@ struct hash<buv::TxIdPrefix> {
 
 } // namespace robin_hood
 
+namespace std {
+
+template <>
+struct hash<buv::TxIdPrefix> {
+    auto operator()(buv::TxIdPrefix const& txid) const noexcept -> size_t {
+        auto h = size_t();
+        std::memcpy(&h, txid.data(), sizeof(size_t));
+        return h;
+    }
+};
+
+} // namespace std
+
 namespace buv {
 
 struct UtxoPerTx {
@@ -57,7 +71,8 @@ public:
 
 class Utxo {
     ChunkStore mChunkStore{};
-    robin_hood::unordered_node_map<TxIdPrefix, UtxoPerTx> mTxidToUtxos;
+    // robin_hood::unordered_node_map<TxIdPrefix, UtxoPerTx> mTxidToUtxos;
+    std::unordered_map<TxIdPrefix, UtxoPerTx> mTxidToUtxos;
 
 public:
     // Removes the utxo, and returns the amount & blockheight when it was added.
@@ -81,7 +96,7 @@ public:
         return VoutInserter(mChunkStore, utxoPerTx.chunk);
     }
 
-    [[nodiscard]] auto map() const -> robin_hood::unordered_node_map<TxIdPrefix, UtxoPerTx> const& {
+    [[nodiscard]] auto map() const -> std::unordered_map<TxIdPrefix, UtxoPerTx> const& {
         return mTxidToUtxos;
     }
 

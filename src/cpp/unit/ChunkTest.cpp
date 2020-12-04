@@ -40,50 +40,68 @@ TEST_CASE("chunk_single") {
 
 TEST_CASE("chunk_random") {
     auto voutAndSatoshi = std::vector<buv::VoutSatoshi>();
-    for (uint16_t i = 0; i < 10000; ++i) {
-        voutAndSatoshi.emplace_back(i, i * 1'000'000);
-    }
 
-    // now fill up chunks
-    auto chunkStore = buv::ChunkStore();
-    REQUIRE(chunkStore.numAllocatedChunks() == 0);
-    REQUIRE(chunkStore.numFreeChunks() == 0);
-
-    buv::Chunk* baseChunk = nullptr;
-    buv::Chunk* lastChunk = nullptr;
-    for (auto const& vs : voutAndSatoshi) {
-        lastChunk = chunkStore.insert(vs.vout(), vs.satoshi(), lastChunk);
-        if (baseChunk == nullptr) {
-            baseChunk = lastChunk;
-        }
-    }
-    REQUIRE(lastChunk != baseChunk);
-    REQUIRE(chunkStore.numAllocatedChunks() == chunkStore.numChunksPerBulk());
-    REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == numChunksRequired(voutAndSatoshi.size()));
-
-    // now that we have plenty of data, remove until empty and check that we get exactly the same result as the vector.
-    buv::Chunk* newBaseChunk = baseChunk;
     auto rng = ankerl::nanobench::Rng(123);
-    while (!voutAndSatoshi.empty()) {
-        auto idx = rng.bounded(voutAndSatoshi.size());
-        auto removed = voutAndSatoshi[idx];
-        voutAndSatoshi[idx] = voutAndSatoshi.back();
-        voutAndSatoshi.pop_back();
 
-        auto satoshi = int64_t();
-        std::tie(satoshi, newBaseChunk) = chunkStore.remove(removed.vout(), newBaseChunk);
+    static constexpr auto maxNumElements = size_t(1000);
+    static constexpr auto numTrials = size_t(1000);
 
-        NOLOG("{:>10} total, {:>10} free ({:4.1f}%)",
-              chunkStore.numAllocatedChunks(),
-              chunkStore.numFreeChunks(),
-              100.0 * chunkStore.numFreeChunks() / chunkStore.numAllocatedChunks());
+    auto chunkStore = buv::ChunkStore();
+
+    for (size_t trial = 0; trial < numTrials; ++trial) {
+
+        auto numElements = static_cast<uint16_t>(rng.bounded(maxNumElements));
+        for (uint16_t i = 0; i < numElements; ++i) {
+            voutAndSatoshi.emplace_back(i, i * 1'000'000);
+        }
+
+        // now fill up chunks
+        if (trial == 0) {
+            REQUIRE(chunkStore.numAllocatedChunks() == 0);
+            REQUIRE(chunkStore.numFreeChunks() == 0);
+        } else {
+            REQUIRE(chunkStore.numAllocatedChunks() == chunkStore.numFreeChunks());
+        }
+
+        buv::Chunk* baseChunk = nullptr;
+        buv::Chunk* lastChunk = nullptr;
+        for (auto const& vs : voutAndSatoshi) {
+            lastChunk = chunkStore.insert(vs.vout(), vs.satoshi(), lastChunk);
+            if (baseChunk == nullptr) {
+                baseChunk = lastChunk;
+            }
+        }
+        if (numElements > buv::Chunk::numVoutSatoshiPerChunk()) {
+            REQUIRE(lastChunk != baseChunk);
+        } else {
+            REQUIRE(lastChunk == baseChunk);
+        }
+        REQUIRE(chunkStore.numAllocatedChunks() == chunkStore.numChunksPerBulk());
         REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == numChunksRequired(voutAndSatoshi.size()));
 
-        if (voutAndSatoshi.empty()) {
-            REQUIRE(newBaseChunk == nullptr);
-        } else {
-            REQUIRE(newBaseChunk == baseChunk);
+        // now that we have plenty of data, remove until empty and check that we get exactly the same result as the vector.
+        buv::Chunk* newBaseChunk = baseChunk;
+        while (!voutAndSatoshi.empty()) {
+            auto idx = rng.bounded(voutAndSatoshi.size());
+            auto removed = voutAndSatoshi[idx];
+            voutAndSatoshi[idx] = voutAndSatoshi.back();
+            voutAndSatoshi.pop_back();
+
+            auto satoshi = int64_t();
+            std::tie(satoshi, newBaseChunk) = chunkStore.remove(removed.vout(), newBaseChunk);
+
+            NOLOG("{:>10} total, {:>10} free ({:4.1f}%)",
+                  chunkStore.numAllocatedChunks(),
+                  chunkStore.numFreeChunks(),
+                  100.0 * chunkStore.numFreeChunks() / chunkStore.numAllocatedChunks());
+            REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == numChunksRequired(voutAndSatoshi.size()));
+
+            if (voutAndSatoshi.empty()) {
+                REQUIRE(newBaseChunk == nullptr);
+            } else {
+                REQUIRE(newBaseChunk == baseChunk);
+            }
+            REQUIRE(satoshi == removed.satoshi());
         }
-        REQUIRE(satoshi == removed.satoshi());
     }
 }
