@@ -14,6 +14,7 @@ target_sources_local(${PROJECT_NAME}
         app/show_block_changes.cpp
         app/utxo_to_change.cpp
         app/Utxo.cpp
+        app/UtxoV2.cpp
         app/Visualizer.cpp
         buv/SocketStream.cpp
         unit/BlockEncoderTest.cpp

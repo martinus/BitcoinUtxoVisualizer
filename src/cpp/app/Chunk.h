@@ -154,6 +154,9 @@ public:
     [[nodiscard]] auto numAllocatedChunks() const -> size_t;
 
     // Number of chunks in one bulk allocation
+    [[nodiscard]] auto numAllocatedBulks() const -> size_t;
+
+    // Number of chunks in one bulk allocation
     [[nodiscard]] static auto numChunksPerBulk() -> size_t;
 
 private:

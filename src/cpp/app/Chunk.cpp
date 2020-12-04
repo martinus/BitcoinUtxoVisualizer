@@ -15,6 +15,10 @@ auto ChunkStore::numChunksPerBulk() -> size_t {
     return NumChunksPerBulk;
 }
 
+auto ChunkStore::numAllocatedBulks() const -> size_t {
+    return mStore.size();
+}
+
 auto ChunkStore::takeFromStore() -> Chunk* {
     // If freelist is empty, allocate a new array, interlink everything, and put into freelist
     if (mFreeList == nullptr) {

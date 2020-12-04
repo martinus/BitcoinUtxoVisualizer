@@ -1,5 +1,5 @@
 #include <app/BlockEncoder.h>
-#include <app/Utxo.h>
+#include <app/UtxoV2.h>
 #include <app/loadAllBlockHashes.h>
 #include <util/HttpClient.h>
 #include <util/LogThrottler.h>
@@ -22,8 +22,6 @@ using namespace std::literals;
 namespace {
 
 [[nodiscard]] auto integrateBlockData(simdjson::dom::element const& blockData, buv::Utxo& utxo) -> buv::ChangesInBlock {
-    static constexpr auto blockHeightIdx = std::numeric_limits<uint16_t>::max();
-
     auto cib = buv::ChangesInBlock();
     cib.beginBlock(blockData["height"].get_uint64());
 
@@ -37,28 +35,10 @@ namespace {
                 auto sourceTxid = util::fromHex<buv::txidPrefixSize>(vin["txid"].get_c_str());
                 auto sourceVout = static_cast<uint16_t>(vin["vout"].get_uint64());
 
-                auto unspentSourceOutputs = utxo.find(sourceTxid);
-                if (unspentSourceOutputs == utxo.end()) {
-                    throw std::runtime_error("DAMN! did not find txid");
-                }
-                auto voutAmount = unspentSourceOutputs->second.find(sourceVout);
-                if (voutAmount == unspentSourceOutputs->second.end()) {
-                    throw std::runtime_error("DAMN! output not there");
-                }
+                auto [satoshi, blockHeight] = utxo.remove(sourceTxid, sourceVout);
 
                 // found an output that's spent! negative amount, because it's spent
-                cib.addChange(-voutAmount->second.value(), unspentSourceOutputs->second[blockHeightIdx].value());
-
-                // remove the spent entry. If the whole tx is spent, remove it as well.
-                unspentSourceOutputs->second.erase(voutAmount);
-                if (1U == unspentSourceOutputs->second.size()) {
-                    // only blocksize is left, but no output any more => get rid of the whole map
-                    utxo.erase(unspentSourceOutputs);
-                } else {
-                    // check if a smaller map would be sufficient
-                    auto& map = unspentSourceOutputs->second;
-                    map.compact();
-                }
+                cib.addChange(-satoshi, blockHeight);
             }
         } else {
             isCoinbaseTx = false;
@@ -66,18 +46,12 @@ namespace {
 
         // add all outputs from this transaction to the utxo
         auto txid = util::fromHex<buv::txidPrefixSize>(tx["txid"].get_c_str());
-        auto& utxoPerTx = utxo[txid];
-
-        // reserve to hold blockheight + all outputs
-        util::reserve(utxoPerTx, 1 + tx["vout"].get_array().size());
-        utxoPerTx[blockHeightIdx] = buv::Satoshi(cib.blockHeight());
+        auto inserter = utxo.inserter(txid, cib.blockHeight());
 
         auto n = 0;
         for (auto const& vout : tx["vout"]) {
             auto sat = std::llround(vout["value"].get_double() * 100'000'000);
-            auto satoshi = buv::Satoshi(sat);
-            utxoPerTx[n] = satoshi;
-
+            inserter.insert(n, sat);
             cib.addChange(sat, cib.blockHeight());
             ++n;
         }
@@ -140,7 +114,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
             auto cib = integrateBlockData(res.blockData, *utxo);
 
-            LOGIF(throttler(), "height={}, bytes={}. utxo: {} entries", cib.blockHeight(), res.jsonData.size(), utxo->size());
+            LOGIF(throttler(), "height={}, bytes={}. utxo: {}", cib.blockHeight(), res.jsonData.size(), *utxo);
 
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)
