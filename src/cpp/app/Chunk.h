@@ -60,16 +60,33 @@ public:
 };
 
 // Chunk contains multiple VoutSatoshi, and links to the next one.
+// How many entries per chunk? The overwhelming number of chunks contain a single entry:
+//
+//     count    vouts
+//     44820    11
+//     50353    10
+//     55485    9
+//     66058    8
+//     74970    7
+//    114230    6
+//    131804    5
+//    229230    4
+//    445223    3
+//   1987081    2
+//   2015402    12
+//  19460719    1
+//
+// According to my overhead calculation, 2 elements are space-wise the optimium. Below that q
 class Chunk {
-    static constexpr auto NumVoutSathosiPerChunk = 12;
+    static constexpr auto NumVoutSathosiPerChunk = 2;
     Chunk* mNextChunk = nullptr;
     std::array<VoutSatoshi, NumVoutSathosiPerChunk> mVoutSatoshi{};
 
 public:
-    [[nodiscard]] constexpr auto voutSatoshi() -> std::array<VoutSatoshi, 12>& {
+    [[nodiscard]] constexpr auto voutSatoshi() -> std::array<VoutSatoshi, NumVoutSathosiPerChunk>& {
         return mVoutSatoshi;
     }
-    [[nodiscard]] constexpr auto voutSatoshi() const -> std::array<VoutSatoshi, 12> const& {
+    [[nodiscard]] constexpr auto voutSatoshi() const -> std::array<VoutSatoshi, NumVoutSathosiPerChunk> const& {
         return mVoutSatoshi;
     }
 
@@ -120,7 +137,10 @@ public:
         return s;
     }
 
-    [[nodiscard]] constexpr auto next() const -> Chunk* {
+    [[nodiscard]] constexpr auto next() -> Chunk* {
+        return mNextChunk;
+    }
+    [[nodiscard]] constexpr auto next() const -> Chunk const* {
         return mNextChunk;
     }
 

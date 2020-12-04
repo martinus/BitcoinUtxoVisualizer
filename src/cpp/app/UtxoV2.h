@@ -84,6 +84,10 @@ public:
             if (newChunk == nullptr) {
                 // whole transaction was consumed, remove it from the map
                 mTxidToUtxos.erase(it);
+            } else {
+                if (newChunk->empty()) {
+                    throw std::runtime_error("shouldn't be empty!");
+                }
             }
             return std::make_pair(satoshi, blockHeight);
         }
@@ -109,7 +113,10 @@ public:
 } // namespace buv
 
 template <>
-struct fmt::formatter<buv::Utxo> {
-    static auto parse(fmt::format_parse_context& ctx) -> format_parse_context::iterator;
-    static auto format(buv::Utxo const& utxo, format_context& ctx) -> format_context::iterator;
+class fmt::formatter<buv::Utxo> {
+    bool mIsDetailed = false;
+
+public:
+    auto parse(fmt::format_parse_context& ctx) -> format_parse_context::iterator;
+    auto format(buv::Utxo const& utxo, format_context& ctx) const -> format_context::iterator;
 };

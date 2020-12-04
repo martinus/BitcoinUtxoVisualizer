@@ -13,7 +13,6 @@ target_sources_local(${PROJECT_NAME}
         app/parse_block.cpp
         app/show_block_changes.cpp
         app/utxo_to_change.cpp
-        app/Utxo.cpp
         app/UtxoV2.cpp
         app/Visualizer.cpp
         buv/SocketStream.cpp
@@ -21,7 +20,6 @@ target_sources_local(${PROJECT_NAME}
         unit/ChunkTest.cpp
         unit/HexTest.cpp
         unit/parallelToSequentialTest.cpp
-        unit/UtxoTest.cpp
         unit/VarIntTest.cpp
         util/doctest.cpp
         util/hex.cpp

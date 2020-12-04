@@ -100,6 +100,9 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         resource.cli = util::HttpClient::create(bitcoinRpcUrl);
     }
 
+    auto numLogs = 0;
+    static constexpr auto logDetailedEvery = size_t(100);
+
     util::parallelToSequential(
         util::SequenceId{allBlockHashes.size()},
         util::ResourceId{resources.size()},
@@ -116,30 +119,21 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
             auto cib = integrateBlockData(res.blockData, *utxo);
 
-            LOGIF(throttler(), "height={}, bytes={}. utxo: {}", cib.blockHeight(), res.jsonData.size(), *utxo);
+            if (throttler() == util::Log::show) {
+                ++numLogs;
+                auto const* format = "height={}, bytes={}. utxo: {}";
+                if (numLogs % logDetailedEvery == 0) {
+                    format = "height={}, bytes={}. utxo: {:d}";
+                }
+                LOG(format, cib.blockHeight(), res.jsonData.size(), *utxo);
+            }
 
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)
             res.jsonData = std::string();
 
             fout << cib.encode();
-
-#if 0
-            // if enough time has passed, dump utxo, free memory, then load it again.
-            if (utxoDumpThrottler() == util::Log::show) {
-                auto utxoDumpFilename = std::filesystem::path(dataDir) / "utxo.dump";
-                LOG("storing UTXO...");
-                buv::storeUtxo(*utxo, utxoDumpFilename);
-                // free the memory before loading
-                LOG("freeing UTXO memory...");
-                utxo = nullptr;
-                LOG("waiting 5 seconds...");
-                std::this_thread::sleep_for(5s);
-                LOG("loading UTXO...");
-                utxo = std::make_unique<buv::Utxo>();
-                utxo = buv::loadUtxo(utxoDumpFilename);
-                LOG("loading UTXO done!");
-            }
-#endif
         });
+
+    LOG("Done! utxo: {:d}", *utxo);
 }
