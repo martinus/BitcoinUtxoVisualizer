@@ -71,8 +71,9 @@ public:
 
 class Utxo {
     ChunkStore mChunkStore{};
-    // robin_hood::unordered_node_map<TxIdPrefix, UtxoPerTx> mTxidToUtxos;
-    std::unordered_map<TxIdPrefix, UtxoPerTx> mTxidToUtxos;
+    using Map = robin_hood::unordered_node_map<TxIdPrefix, UtxoPerTx>;
+    // using Map = std::unordered_map<TxIdPrefix, UtxoPerTx>;
+    Map mTxidToUtxos{};
 
 public:
     // Removes the utxo, and returns the amount & blockheight when it was added.
@@ -96,7 +97,7 @@ public:
         return VoutInserter(mChunkStore, utxoPerTx.chunk);
     }
 
-    [[nodiscard]] auto map() const -> std::unordered_map<TxIdPrefix, UtxoPerTx> const& {
+    [[nodiscard]] auto map() const -> Map const& {
         return mTxidToUtxos;
     }
 
