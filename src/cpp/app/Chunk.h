@@ -27,35 +27,32 @@ namespace buv {
 // Stores vout and satoshi in 10 bytes.
 // Special vout value 0xFFFF means it's empty.
 class VoutSatoshi {
-    static constexpr auto NumBytesSatoshi = sizeof(int64_t);
-
-    uint16_t mVout = 0xFFFF;
-    std::array<uint8_t, NumBytesSatoshi> mSatoshi{};
+    static constexpr auto voutMask = uint64_t(0xFFFF0000'00000000);
+    static constexpr auto satoshiMask = uint64_t(0x0000FFFF'FFFFFFFF);
+    static constexpr auto voutShift = 6U * 8U;
+    // 2 bytes vout, 6 byte satoshi
+    uint64_t mVoutAndSatoshi = voutMask;
 
 public:
     constexpr VoutSatoshi() noexcept = default;
 
-    inline VoutSatoshi(uint16_t vout, int64_t x) noexcept
-        : mVout(vout) {
-        std::memcpy(mSatoshi.data(), &x, NumBytesSatoshi);
-    }
+    inline VoutSatoshi(uint16_t vout, int64_t satoshi) noexcept
+        : mVoutAndSatoshi(static_cast<uint64_t>(vout) << voutShift | static_cast<uint64_t>(satoshi)) {}
 
     [[nodiscard]] inline auto satoshi() const noexcept -> int64_t {
-        auto x = int64_t();
-        std::memcpy(&x, mSatoshi.data(), NumBytesSatoshi);
-        return x;
+        return mVoutAndSatoshi & satoshiMask;
     }
 
     [[nodiscard]] constexpr auto vout() const noexcept -> uint16_t {
-        return mVout;
+        return static_cast<uint16_t>(mVoutAndSatoshi >> voutShift);
     }
 
     [[nodiscard]] constexpr auto empty() const noexcept -> bool {
-        return mVout == 0xFFFF;
+        return vout() == uint16_t(0xFFFF);
     }
 
     [[nodiscard]] constexpr auto operator==(VoutSatoshi const& other) const -> bool {
-        return mVout == other.mVout && mSatoshi == other.mSatoshi;
+        return mVoutAndSatoshi == other.mVoutAndSatoshi;
     }
 };
 
@@ -78,7 +75,7 @@ public:
 //
 // According to my overhead calculation, 2 elements are space-wise the optimium. Below that q
 class Chunk {
-    static constexpr auto NumVoutSathosiPerChunk = 2;
+    static constexpr auto NumVoutSathosiPerChunk = 1;
     Chunk* mNextChunk = nullptr;
     std::array<VoutSatoshi, NumVoutSathosiPerChunk> mVoutSatoshi{};
 
