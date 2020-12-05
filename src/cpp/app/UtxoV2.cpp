@@ -34,11 +34,12 @@ auto formatter<buv::Utxo>::format(buv::Utxo const& utxo, format_context& ctx) co
     format_to(out,
               "({} txids, {} vout's used, {} allocated ({} bulk))",
               utxo.map().size(),
-              (cs.numAllocatedChunks() - cs.numFreeChunks()) * buv::Chunk::numVoutSatoshiPerChunk(),
-              cs.numAllocatedChunks() * buv::Chunk::numVoutSatoshiPerChunk(),
+              cs.numAllocatedChunks() - cs.numFreeChunks(),
+              cs.numAllocatedChunks(),
               cs.numAllocatedBulks());
 
     if (mIsDetailed) {
+#if 0
         auto numvoutsToCount = robin_hood::unordered_flat_map<size_t, size_t>();
         for (auto const& kv : utxo.map()) {
             auto const* chunk = kv.second.chunk();
@@ -58,6 +59,7 @@ auto formatter<buv::Utxo>::format(buv::Utxo const& utxo, format_context& ctx) co
         for (auto const& [vouts, count] : numvoutsAndCounts) {
             format_to(out, "\n\t{:10} x {:10} vouts", count, vouts);
         }
+#endif
     }
     return out;
 }

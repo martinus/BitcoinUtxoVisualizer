@@ -108,10 +108,6 @@ public:
             if (newChunk == nullptr) {
                 // whole transaction was consumed, remove it from the map
                 mTxidToUtxos.erase(it);
-            } else {
-                if (newChunk->empty()) {
-                    throw std::runtime_error("shouldn't be empty!");
-                }
             }
             return std::make_pair(satoshi, blockHeight);
         }

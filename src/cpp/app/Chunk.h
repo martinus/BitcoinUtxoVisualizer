@@ -27,28 +27,23 @@ namespace buv {
 // Stores vout and satoshi in 10 bytes.
 // Special vout value 0xFFFF means it's empty.
 class VoutSatoshi {
-    static constexpr auto voutMask = uint64_t(0xFFFF0000'00000000);
-    static constexpr auto satoshiMask = uint64_t(0x0000FFFF'FFFFFFFF);
-    static constexpr auto voutShift = 6U * 8U;
-    // 2 bytes vout, 6 byte satoshi
-    uint64_t mVoutAndSatoshi = voutMask;
+    static constexpr auto emptyMask = uint64_t(0x00000000'0000FFFF);
+
+    // 6 byte satoshi, 2 bytes vout
+    uint64_t mVoutAndSatoshi = emptyMask;
 
 public:
     constexpr VoutSatoshi() noexcept = default;
 
     inline VoutSatoshi(uint16_t vout, int64_t satoshi) noexcept
-        : mVoutAndSatoshi(static_cast<uint64_t>(vout) << voutShift | static_cast<uint64_t>(satoshi)) {}
+        : mVoutAndSatoshi(static_cast<uint64_t>(satoshi) << 16U | vout) {}
 
-    [[nodiscard]] inline auto satoshi() const noexcept -> int64_t {
-        return mVoutAndSatoshi & satoshiMask;
+    [[nodiscard]] constexpr auto satoshi() const noexcept -> int64_t {
+        return mVoutAndSatoshi >> 16U;
     }
 
     [[nodiscard]] constexpr auto vout() const noexcept -> uint16_t {
-        return static_cast<uint16_t>(mVoutAndSatoshi >> voutShift);
-    }
-
-    [[nodiscard]] constexpr auto empty() const noexcept -> bool {
-        return vout() == uint16_t(0xFFFF);
+        return static_cast<uint16_t>(mVoutAndSatoshi);
     }
 
     [[nodiscard]] constexpr auto operator==(VoutSatoshi const& other) const -> bool {
@@ -75,28 +70,15 @@ public:
 //
 // According to my overhead calculation, 2 elements are space-wise the optimium. Below that q
 class Chunk {
-    static constexpr auto NumVoutSathosiPerChunk = 1;
     Chunk* mNextChunk = nullptr;
-    std::array<VoutSatoshi, NumVoutSathosiPerChunk> mVoutSatoshi{};
+    VoutSatoshi mVoutSatoshi{};
 
 public:
-    [[nodiscard]] constexpr auto voutSatoshi() -> std::array<VoutSatoshi, NumVoutSathosiPerChunk>& {
+    [[nodiscard]] constexpr auto voutSatoshi() -> VoutSatoshi& {
         return mVoutSatoshi;
     }
-    [[nodiscard]] constexpr auto voutSatoshi() const -> std::array<VoutSatoshi, NumVoutSathosiPerChunk> const& {
+    [[nodiscard]] constexpr auto voutSatoshi() const -> VoutSatoshi const& {
         return mVoutSatoshi;
-    }
-
-    [[nodiscard]] constexpr auto voutSatoshi(size_t idx) -> VoutSatoshi& {
-        return mVoutSatoshi[idx];
-    }
-
-    [[nodiscard]] constexpr auto voutSatoshi(size_t idx) const -> VoutSatoshi const& {
-        return mVoutSatoshi[idx];
-    }
-
-    [[nodiscard]] static constexpr auto numVoutSatoshiPerChunk() -> size_t {
-        return NumVoutSathosiPerChunk;
     }
 
     constexpr void clear() {
@@ -104,39 +86,15 @@ public:
         mNextChunk = nullptr;
     }
 
-    [[nodiscard]] constexpr auto full() const noexcept -> bool {
-        return !mVoutSatoshi.back().empty();
-    }
-
-    [[nodiscard]] constexpr auto empty() const noexcept -> bool {
-        return mVoutSatoshi.front().empty();
-    }
-
     // finds an entry with fout, returns index or numeric_limits<size_t>::max() if not found. Does NOT follow next().
-    [[nodiscard]] constexpr auto find(uint16_t vout) const -> size_t {
-        for (auto i = size_t(); i < mVoutSatoshi.size(); ++i) {
-            if (mVoutSatoshi[i].empty()) {
-                return std::numeric_limits<size_t>::max();
-            }
-            if (mVoutSatoshi[i].vout() == vout) {
-                return i;
-            }
-        }
-        return std::numeric_limits<size_t>::max();
-    }
-
-    // number of elements that are taken
-    [[nodiscard]] constexpr auto size() const -> size_t {
-        auto s = mVoutSatoshi.size();
-        while (s != 0 && mVoutSatoshi[s - 1].empty()) {
-            --s;
-        }
-        return s;
+    [[nodiscard]] constexpr auto isVout(uint16_t vout) const -> bool {
+        return mVoutSatoshi.vout() == vout;
     }
 
     [[nodiscard]] constexpr auto next() -> Chunk* {
         return mNextChunk;
     }
+
     [[nodiscard]] constexpr auto next() const -> Chunk const* {
         return mNextChunk;
     }

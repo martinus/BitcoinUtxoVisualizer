@@ -13,40 +13,22 @@ TEST_CASE("chunk_single") {
     auto* chunk = chunkStore.insert(12, 12345, nullptr);
     REQUIRE(chunk->next() == nullptr);
     auto* chunk2 = chunkStore.insert(13, 4444, chunk);
-    if (buv::Chunk::numVoutSatoshiPerChunk() > 1) {
-        REQUIRE(chunk == chunk2);
-        REQUIRE(chunk->size() == 2);
-        REQUIRE(chunk->voutSatoshi(0) == buv::VoutSatoshi{12, 12345});
-        REQUIRE(chunk->voutSatoshi(1) == buv::VoutSatoshi{13, 4444});
-    } else {
-        REQUIRE(chunk != chunk2);
-        REQUIRE(chunk->size() == 1);
-        REQUIRE(chunk->voutSatoshi(0) == buv::VoutSatoshi{12, 12345});
-        REQUIRE(chunk->next() != nullptr);
-        REQUIRE(chunk->next()->voutSatoshi(0) == buv::VoutSatoshi{13, 4444});
-    }
+    REQUIRE(chunk != chunk2);
+    REQUIRE(chunk->voutSatoshi() == buv::VoutSatoshi{12, 12345});
+    REQUIRE(chunk->next() != nullptr);
+    REQUIRE(chunk->next()->voutSatoshi() == buv::VoutSatoshi{13, 4444});
 
     // remove first entry
     auto [satoshi, newChunk] = chunkStore.remove(12, chunk);
     REQUIRE(satoshi == 12345);
     REQUIRE(newChunk == chunk);
-    REQUIRE(chunk->size() == 1);
-    REQUIRE(!chunk->empty());
 
     // last entry moved forward
-    REQUIRE(chunk->voutSatoshi(0) == buv::VoutSatoshi{13, 4444});
-    if (buv::Chunk::numVoutSatoshiPerChunk() > 1) {
-        REQUIRE(chunk->voutSatoshi(1) == buv::VoutSatoshi{});
-    } else {
-        REQUIRE(chunk->next() == nullptr);
-    }
+    REQUIRE(chunk->voutSatoshi() == buv::VoutSatoshi{13, 4444});
+    REQUIRE(chunk->next() == nullptr);
     std::tie(satoshi, newChunk) = chunkStore.remove(13, chunk);
     REQUIRE(newChunk == nullptr);
     REQUIRE(satoshi == 4444);
-}
-
-[[nodiscard]] auto numChunksRequired(size_t numVoutSatoshi) -> size_t {
-    return (numVoutSatoshi + buv::Chunk::numVoutSatoshiPerChunk() - 1) / buv::Chunk::numVoutSatoshiPerChunk();
 }
 
 TEST_CASE("chunk_random") {
@@ -82,13 +64,13 @@ TEST_CASE("chunk_random") {
                 baseChunk = lastChunk;
             }
         }
-        if (numElements > buv::Chunk::numVoutSatoshiPerChunk()) {
+        if (numElements > 1) {
             REQUIRE(lastChunk != baseChunk);
         } else {
             REQUIRE(lastChunk == baseChunk);
         }
         REQUIRE(chunkStore.numAllocatedChunks() == chunkStore.numChunksPerBulk());
-        REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == numChunksRequired(voutAndSatoshi.size()));
+        REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == voutAndSatoshi.size());
 
         // now that we have plenty of data, remove until empty and check that we get exactly the same result as the vector.
         buv::Chunk* newBaseChunk = baseChunk;
@@ -105,7 +87,7 @@ TEST_CASE("chunk_random") {
                   chunkStore.numAllocatedChunks(),
                   chunkStore.numFreeChunks(),
                   100.0 * chunkStore.numFreeChunks() / chunkStore.numAllocatedChunks());
-            REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == numChunksRequired(voutAndSatoshi.size()));
+            REQUIRE(chunkStore.numAllocatedChunks() - chunkStore.numFreeChunks() == voutAndSatoshi.size());
 
             if (voutAndSatoshi.empty()) {
                 REQUIRE(newBaseChunk == nullptr);
