@@ -57,9 +57,12 @@ public:
 //          4 | num_bytes    | uint32_t  | size in bytes of the data blob for this blob. Add num_bytes to skip to the next block, then you will point to the marker "BLK\0" of the next block. This is useful to quickly skip to the next block without parsing the data.
 //         1+ | amount       | var_int   | var-int (zig-zag encoding) of the smallest change (most likely a negative number)
 //         1+ | block        | var_uint  | var-uint encoded of the block height of the amount
-//  The following fields are repeated until the end of the block (num_bytes - (8 + 4) bytes). Sorted by amount.
+//  The following fields are repeated until for all spent amounts (satoshi <= 0) Sorted by amount.
 //         1+ | amount_diff  | var_uint  | var-uint encoded difference to previous amount. Guaranteed to be positive due to the sorting.
 //         1+ | block_diff   | var_int   | var-int (zig-zag encoding) of block difference to previous entry.
+//  The following fields are repeated until for all new amounts (satoshi > 0). Sorted by amount. No need for blockheight because it must be the current block.
+//         1+ | amount_diff  | var_uint  | var-uint encoded difference to previous amount. Guaranteed to be positive due to the sorting.
+
 //
 // clang-format on
 class ChangesInBlock {

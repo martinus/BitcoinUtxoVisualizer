@@ -20,9 +20,9 @@ TEST_CASE("block_encoder_test_simple") {
 TEST_CASE("block_encoder_test_data") {
     auto cib = buv::ChangesInBlock();
     cib.beginBlock(123456);
-    cib.addChange(93938, 777);
-    cib.addChange(93940, 760);
-    cib.addChange(132, 789);
+    cib.addChange(-93938, 777);
+    cib.addChange(-93940, 760);
+    cib.addChange(132, 123456);
     cib.finalizeBlock();
 
     auto data = cib.encode();
@@ -35,15 +35,15 @@ auto makeTwoBlocks() -> std::vector<buv::ChangesInBlock> {
     auto cibs = std::vector<buv::ChangesInBlock>();
     auto cib = buv::ChangesInBlock();
     cib.beginBlock(123456);
-    cib.addChange(93938, 777);
-    cib.addChange(93940, 760);
+    cib.addChange(93938, 123456);
+    cib.addChange(93940, 123456);
     cib.addChange(-132, 789);
     cib.finalizeBlock();
     cibs.emplace_back(cib);
 
     cib.beginBlock(123457);
-    cib.addChange(93888, 12345);
-    cib.addChange(94888, 12346);
+    cib.addChange(93888, 123457);
+    cib.addChange(94888, 123457);
     cib.finalizeBlock();
     cibs.emplace_back(cib);
 
@@ -71,12 +71,12 @@ TEST_CASE("block_encode_and_decode") {
     REQUIRE(cib.blockHeight() == 123456);
     REQUIRE(cib.changeAtBlockheights().size() == 3);
     REQUIRE(cib.changeAtBlockheights()[0] == buv::ChangeAtBlockheight(-132, 789));
-    REQUIRE(cib.changeAtBlockheights()[1] == buv::ChangeAtBlockheight(93938, 777));
-    REQUIRE(cib.changeAtBlockheights()[2] == buv::ChangeAtBlockheight(93940, 760));
+    REQUIRE(cib.changeAtBlockheights()[1] == buv::ChangeAtBlockheight(93938, 123456));
+    REQUIRE(cib.changeAtBlockheights()[2] == buv::ChangeAtBlockheight(93940, 123456));
 
     std::tie(cib, ptr) = buv::ChangesInBlock::decode(ptr);
     REQUIRE(cib.blockHeight() == 123457);
     REQUIRE(cib.changeAtBlockheights().size() == 2);
-    REQUIRE(cib.changeAtBlockheights()[0] == buv::ChangeAtBlockheight(93888, 12345));
-    REQUIRE(cib.changeAtBlockheights()[1] == buv::ChangeAtBlockheight(94888, 12346));
+    REQUIRE(cib.changeAtBlockheights()[0] == buv::ChangeAtBlockheight(93888, 123457));
+    REQUIRE(cib.changeAtBlockheights()[1] == buv::ChangeAtBlockheight(94888, 123457));
 }

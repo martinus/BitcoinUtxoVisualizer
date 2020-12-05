@@ -22,6 +22,9 @@ void ChangesInBlock::finalizeBlock() {
 }
 
 void ChangesInBlock::addChange(int64_t satoshi, uint32_t blockHeight) {
+    if (satoshi > 0 && blockHeight != mBlockHeight) {
+        throw std::runtime_error("satoshi > 0 but blockheight does not match!");
+    }
     if (mIsFinalized) {
         throw std::runtime_error("can't add an amount after finalizeBlock()");
     }
@@ -43,8 +46,8 @@ auto ChangesInBlock::encode() const -> std::string {
     data.append(4, '\0');
 
     if (!mChangeAtBlockheights.empty()) {
-        // now comes the data in mChangeAtBlockheight. Sorted by satoshi, so the satoshi's only go up.
-        // The first entry will probably be negative, if anny old amount was spent. That is encoded as var_int.
+        // now comes the data in mChangeAtBlockheight. Sorted by satoshi, so the satoshi's only increase.
+        // The first entry will probably be negative, if any old amount was spent. That is encoded as var_int.
         //
         // We only store the difference to the previous satoshi amount for the following entries, encoded as unsigned varint.
         // Thus, the amounts will be stored quite compact. Only thing better would be golomb coded sets
@@ -65,10 +68,13 @@ auto ChangesInBlock::encode() const -> std::string {
         while (it != mChangeAtBlockheights.end()) {
             // the amount diff will always be positive since its sorted, so we can serialize an uint
             data += varIntEncoder.encode<uint64_t>(it->satoshi() - pre->satoshi());
-            // diff of blockheight can be negative as well
-            data +=
-                varIntEncoder.encode<int64_t>(static_cast<int64_t>(it->blockHeight()) - static_cast<int64_t>(pre->blockHeight()));
 
+            // only encode blockheight if satoshi is negative. Any satoshi that is positive will have the current block.
+            if (it->satoshi() <= 0) {
+                // diff of blockheight can be negative as well
+                data += varIntEncoder.encode<int64_t>(static_cast<int64_t>(it->blockHeight()) -
+                                                      static_cast<int64_t>(pre->blockHeight()));
+            }
             pre = it;
             ++it;
         }
@@ -151,10 +157,16 @@ auto ChangesInBlock::decode(ChangesInBlock&& reusableChanges, char const* ptr) -
         auto diffBlockheight = int64_t();
 
         util::VarInt::decodeV2<uint64_t>(diffSatoshi, payloadPtr);
-        util::VarInt::decodeV2<int64_t>(diffBlockheight, payloadPtr);
         satoshi += diffSatoshi;
-        blockHeight += diffBlockheight;
-        reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
+
+        if (satoshi <= 0) {
+            // only decode blockheight if satoshi was spent
+            util::VarInt::decodeV2<int64_t>(diffBlockheight, payloadPtr);
+            blockHeight += diffBlockheight;
+            reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
+        } else {
+            reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, header.blockHeight);
+        }
     }
 
     return std::make_pair(std::move(reusableChanges), payloadPtr);
