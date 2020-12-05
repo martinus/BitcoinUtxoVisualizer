@@ -1,6 +1,6 @@
 #include <app/loadAllBlockHashes.h>
 #include <util/HttpClient.h>
-#include <util/LogThrottler.h>
+#include <util/Throttle.h>
 #include <util/hex.h>
 #include <util/log.h>
 #include <util/parallelToSequential.h>
@@ -36,7 +36,7 @@ TEST_CASE("check_blocks" * doctest::skip()) {
         resource.cli = util::HttpClient::create(bitcoinRpcUrl);
     }
 
-    auto throttler = util::LogThrottler(1s);
+    auto throttler = util::ThrottlePeriodic(1s);
 
     util::parallelToSequential(
         util::SequenceId{allBlockHashes.size()},

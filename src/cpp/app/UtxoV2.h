@@ -100,6 +100,11 @@ class Utxo {
     static_assert(sizeof(Map::value_type) == 8 + 8 + 4);
 
 public:
+    Utxo() {
+        // we certainly have to keep a lot of data around. Reserve because we know we'll need it
+        mTxidToUtxos.reserve(50'000'000);
+    }
+
     // Removes the utxo, and returns the amount & blockheight when it was added.
     [[nodiscard]] auto remove(TxIdPrefix const& txIdPrefix, uint16_t vout) -> std::pair<int64_t, uint32_t> {
         if (auto it = mTxidToUtxos.find(txIdPrefix); it != mTxidToUtxos.end()) {

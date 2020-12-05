@@ -1,6 +1,6 @@
 #include "loadAllBlockHashes.h"
 
-#include <util/LogThrottler.h>
+#include <util/Throttle.h>
 #include <util/log.h>
 
 #include <simdjson.h>
@@ -16,7 +16,7 @@ namespace buv {
 [[nodiscard]] auto loadAllBlockHashes(std::unique_ptr<util::HttpClient> const& cli, std::string_view startBlock)
     -> std::vector<std::string> {
     auto allBlockHashes = std::vector<std::string>();
-    auto throttler = util::LogThrottler(1s);
+    auto throttler = util::ThrottlePeriodic(1s);
 
     auto jsonParser = simdjson::dom::parser();
     auto block = startBlock;

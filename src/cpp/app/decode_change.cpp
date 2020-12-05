@@ -1,5 +1,5 @@
 #include <app/forEachChange.h>
-#include <util/LogThrottler.h>
+#include <util/Throttle.h>
 #include <util/log.h>
 
 #include <doctest.h>
@@ -11,7 +11,7 @@ using namespace std::literals;
 TEST_CASE("decode_change" * doctest::skip()) {
     auto before = std::chrono::steady_clock::now();
 
-    auto throttler = util::LogThrottler(1000ms);
+    auto throttler = util::ThrottlePeriodic(1000ms);
 
     auto expectedBlockHeight = uint32_t();
     auto totalChanges = size_t();

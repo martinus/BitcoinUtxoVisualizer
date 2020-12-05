@@ -1,6 +1,6 @@
 #include <app/forEachChange.h>
 #include <buv/Density.h>
-#include <util/LogThrottler.h>
+#include <util/Throttle.h>
 #include <util/log.h>
 
 #include <doctest.h>
@@ -29,7 +29,7 @@ TEST_CASE("visualizer" * doctest::skip()) {
     cfg.maxBlockHeight = 658'000;
     auto density = buv::Density(cfg);
 
-    auto throttler = util::LogThrottler(1000ms);
+    auto throttler = util::ThrottlePeriodic(1000ms);
 
     buv::forEachChange("../../out/blocks/changes.blk1", [&](buv::ChangesInBlock const& cib) {
         LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());

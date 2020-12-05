@@ -1,7 +1,5 @@
 #pragma once
 
-#include <util/LogEnum.h>
-
 #include <fmt/core.h>
 
 #include <chrono>
@@ -22,7 +20,7 @@ static std::chrono::steady_clock::time_point sStartTime = std::chrono::steady_cl
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define LOGIF(showHide, ...)                              \
     do {                                                  \
-        if (::util::Log::show == (showHide)) {            \
+        if (showHide) {            \
             ::util::log(__FILE__, __LINE__, __VA_ARGS__); \
         }                                                 \
     } while (0)

@@ -2,7 +2,7 @@
 #include <app/UtxoV2.h>
 #include <app/loadAllBlockHashes.h>
 #include <util/HttpClient.h>
-#include <util/LogThrottler.h>
+#include <util/Throttle.h>
 #include <util/hex.h>
 #include <util/kbhit.h>
 #include <util/log.h>
@@ -91,7 +91,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
 
     auto allBlockHashes = buv::loadAllBlockHashes(cli, startBlock);
 
-    auto throttler = util::LogThrottler(1s);
+    auto throttler = util::ThrottlePeriodic(1s);
     // auto utxoDumpThrottler = util::LogThrottler(20s);
 
     auto fout = std::ofstream(std::filesystem::path(dataDir) / "changes.blk1", std::ios::binary | std::ios::out);
@@ -118,7 +118,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
             auto cib = integrateBlockData(res.blockData, *utxo);
 
-            if (throttler() == util::Log::show) {
+            if (throttler()) {
                 if (util::kbhit()) {
                     getchar();
                     LOG("{:10} height, {:10} bytes, {:10.3f} MB max RSS, utxo: {:d}",
