@@ -24,6 +24,7 @@ target_sources_local(${PROJECT_NAME}
         util/doctest.cpp
         util/hex.cpp
         util/HttpClient.cpp
+        util/kbhit.cpp
         util/Mmap.cpp
         util/nanobench.cpp
         util/parallelToSequential.cpp

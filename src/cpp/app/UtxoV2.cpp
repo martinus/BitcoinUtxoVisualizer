@@ -32,24 +32,29 @@ auto formatter<buv::Utxo>::format(buv::Utxo const& utxo, format_context& ctx) co
     auto const& cs = utxo.chunkStore();
 
     format_to(out,
-              "({} txids, {} vout's used, {} allocated ({} bulk))",
+              "({:10} txids, {:10} vout's used, {:10} allocated ({:4} bulk))",
               utxo.map().size(),
               cs.numAllocatedChunks() - cs.numFreeChunks(),
               cs.numAllocatedChunks(),
               cs.numAllocatedBulks());
 
     if (mIsDetailed) {
-#if 0
-        auto numvoutsToCount = robin_hood::unordered_flat_map<size_t, size_t>();
+        // list counts 1-20
+        static constexpr auto maxLen = size_t(20);
+        auto numvoutsAndCounts = std::vector<std::pair<size_t, size_t>>(maxLen);
+        for (size_t i = 0; i < maxLen; ++i) {
+            numvoutsAndCounts[i].first = i + 1;
+            numvoutsAndCounts[i].second = 0;
+        }
         for (auto const& kv : utxo.map()) {
             auto const* chunk = kv.second.chunk();
+            auto len = size_t();
             do {
-                ++numvoutsToCount[chunk->size()];
+                ++len;
                 chunk = chunk->next();
-            } while (chunk != nullptr);
+            } while (chunk != nullptr && len < maxLen);
+            ++numvoutsAndCounts[len - 1].second;
         }
-
-        auto numvoutsAndCounts = std::vector<robin_hood::pair<size_t, size_t>>(numvoutsToCount.begin(), numvoutsToCount.end());
 
         // sort by number of counts
         std::sort(numvoutsAndCounts.begin(), numvoutsAndCounts.end(), [](auto const& a, auto const& b) {
@@ -57,9 +62,8 @@ auto formatter<buv::Utxo>::format(buv::Utxo const& utxo, format_context& ctx) co
         });
 
         for (auto const& [vouts, count] : numvoutsAndCounts) {
-            format_to(out, "\n\t{:10} x {:10} vouts", count, vouts);
+            format_to(out, "\n\t{:10} x {:4} {}", count, vouts, vouts == maxLen ? "or more vouts" : "vouts");
         }
-#endif
     }
     return out;
 }

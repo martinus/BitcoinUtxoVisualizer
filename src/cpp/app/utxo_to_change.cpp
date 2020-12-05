@@ -4,6 +4,7 @@
 #include <util/HttpClient.h>
 #include <util/LogThrottler.h>
 #include <util/hex.h>
+#include <util/kbhit.h>
 #include <util/log.h>
 #include <util/parallelToSequential.h>
 #include <util/reserve.h>
@@ -116,7 +117,14 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
             auto cib = integrateBlockData(res.blockData, *utxo);
 
-            LOGIF(throttler(), "height={}, bytes={}. utxo: {}", cib.blockHeight(), res.jsonData.size(), *utxo);
+            if (throttler() == util::Log::show) {
+                if (util::kbhit()) {
+                    getchar();
+                    LOG("{:10} height, {:10} bytes, utxo: {:d}", cib.blockHeight(), res.jsonData.size(), *utxo);
+                } else {
+                    LOG("{:10} height, {:10} bytes, utxo: {}", cib.blockHeight(), res.jsonData.size(), *utxo);
+                }
+            }
 
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)
