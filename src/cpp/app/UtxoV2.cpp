@@ -41,7 +41,7 @@ auto formatter<buv::Utxo>::format(buv::Utxo const& utxo, format_context& ctx) co
     if (mIsDetailed) {
         auto numvoutsToCount = robin_hood::unordered_flat_map<size_t, size_t>();
         for (auto const& kv : utxo.map()) {
-            auto const* chunk = kv.second.chunk;
+            auto const* chunk = kv.second.chunk();
             do {
                 ++numvoutsToCount[chunk->size()];
                 chunk = chunk->next();

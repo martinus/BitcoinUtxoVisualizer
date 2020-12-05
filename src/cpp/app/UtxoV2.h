@@ -46,25 +46,47 @@ struct hash<buv::TxIdPrefix> {
 
 namespace buv {
 
-struct UtxoPerTx {
-    Chunk* chunk = nullptr;
-    uint32_t blockHeight = 0;
+class UtxoPerTx {
+    // use an array so we we can get no padding
+    std::array<uint8_t, sizeof(void*)> mChunkPtr{};
+    uint32_t mBlockHeight = 0;
+
+public:
+    [[nodiscard]] auto chunk() const -> Chunk* {
+        Chunk* ptr = nullptr;
+        std::memcpy(&ptr, mChunkPtr.data(), sizeof(void*));
+        return ptr;
+    }
+
+    void chunk(Chunk* ptr) {
+        std::memcpy(mChunkPtr.data(), &ptr, sizeof(void*));
+    }
+
+    [[nodiscard]] auto blockHeight() const -> uint32_t {
+        return mBlockHeight;
+    }
+
+    void blockHeight(uint32_t bh) {
+        mBlockHeight = bh;
+    }
 };
+
+static_assert(sizeof(UtxoPerTx) == 8 + 4);
 
 class VoutInserter {
     ChunkStore* mChunkStore = nullptr;
-    Chunk** mChunk = nullptr;
+    UtxoPerTx* mUtxoPerTx = nullptr;
     Chunk* mLastChunk = nullptr;
 
 public:
-    VoutInserter(ChunkStore& chunkStore, Chunk*& chunk)
+    VoutInserter(ChunkStore& chunkStore, UtxoPerTx& utxoPerTx)
         : mChunkStore(&chunkStore)
-        , mChunk(&chunk) {}
+        , mUtxoPerTx(&utxoPerTx) {}
 
     void insert(uint16_t vout, int64_t satoshi) {
         mLastChunk = mChunkStore->insert(vout, satoshi, mLastChunk);
-        if (*mChunk == nullptr) {
-            *mChunk = mLastChunk;
+        if (mUtxoPerTx->chunk() == nullptr) {
+            mUtxoPerTx->chunk(mLastChunk);
         }
     }
 };
@@ -75,12 +97,14 @@ class Utxo {
     // using Map = std::unordered_map<TxIdPrefix, UtxoPerTx>;
     Map mTxidToUtxos{};
 
+    static_assert(sizeof(Map::value_type) == 8 + 8 + 4);
+
 public:
     // Removes the utxo, and returns the amount & blockheight when it was added.
     [[nodiscard]] auto remove(TxIdPrefix const& txIdPrefix, uint16_t vout) -> std::pair<int64_t, uint32_t> {
         if (auto it = mTxidToUtxos.find(txIdPrefix); it != mTxidToUtxos.end()) {
-            auto [satoshi, newChunk] = mChunkStore.remove(vout, it->second.chunk);
-            auto blockHeight = it->second.blockHeight;
+            auto [satoshi, newChunk] = mChunkStore.remove(vout, it->second.chunk());
+            auto blockHeight = it->second.blockHeight();
             if (newChunk == nullptr) {
                 // whole transaction was consumed, remove it from the map
                 mTxidToUtxos.erase(it);
@@ -97,8 +121,8 @@ public:
     // Creates an entry in the table, and returns an Inserter where the vout's can be inserted.
     auto inserter(TxIdPrefix const& txIdPrefix, uint32_t blockHeight) -> VoutInserter {
         auto& utxoPerTx = mTxidToUtxos[txIdPrefix];
-        utxoPerTx.blockHeight = blockHeight;
-        return VoutInserter(mChunkStore, utxoPerTx.chunk);
+        utxoPerTx.blockHeight(blockHeight);
+        return VoutInserter(mChunkStore, utxoPerTx);
     }
 
     [[nodiscard]] auto map() const -> Map const& {

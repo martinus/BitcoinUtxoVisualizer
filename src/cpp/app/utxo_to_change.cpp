@@ -100,9 +100,6 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         resource.cli = util::HttpClient::create(bitcoinRpcUrl);
     }
 
-    auto numLogs = 0;
-    static constexpr auto logDetailedEvery = size_t(100);
-
     util::parallelToSequential(
         util::SequenceId{allBlockHashes.size()},
         util::ResourceId{resources.size()},
@@ -119,14 +116,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             auto& res = resources[resourceId.count()];
             auto cib = integrateBlockData(res.blockData, *utxo);
 
-            if (throttler() == util::Log::show) {
-                ++numLogs;
-                auto const* format = "height={}, bytes={}. utxo: {}";
-                if (numLogs % logDetailedEvery == 0) {
-                    format = "height={}, bytes={}. utxo: {:d}";
-                }
-                LOG(format, cib.blockHeight(), res.jsonData.size(), *utxo);
-            }
+            LOGIF(throttler(), "height={}, bytes={}. utxo: {}", cib.blockHeight(), res.jsonData.size(), *utxo);
 
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)

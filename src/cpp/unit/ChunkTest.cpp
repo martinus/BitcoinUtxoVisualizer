@@ -116,3 +116,5 @@ TEST_CASE("chunk_random") {
         }
     }
 }
+
+static_assert(sizeof(buv::Chunk) == 16);
