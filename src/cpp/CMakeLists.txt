@@ -28,4 +28,5 @@ target_sources_local(${PROJECT_NAME}
         util/Mmap.cpp
         util/nanobench.cpp
         util/parallelToSequential.cpp
+        util/rss.cpp
 )

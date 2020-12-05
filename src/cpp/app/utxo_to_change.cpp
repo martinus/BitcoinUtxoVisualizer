@@ -8,6 +8,7 @@
 #include <util/log.h>
 #include <util/parallelToSequential.h>
 #include <util/reserve.h>
+#include <util/rss.h>
 
 #include <doctest.h>
 #include <fmt/format.h>
@@ -120,9 +121,17 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             if (throttler() == util::Log::show) {
                 if (util::kbhit()) {
                     getchar();
-                    LOG("{:10} height, {:10} bytes, utxo: {:d}", cib.blockHeight(), res.jsonData.size(), *utxo);
+                    LOG("{:10} height, {:10} bytes, {:10.3f} MB max RSS, utxo: {:d}",
+                        cib.blockHeight(),
+                        res.jsonData.size(),
+                        util::maxRss() / 1048576.0,
+                        *utxo);
                 } else {
-                    LOG("{:10} height, {:10} bytes, utxo: {}", cib.blockHeight(), res.jsonData.size(), *utxo);
+                    LOG("{:10} height, {:10} bytes, {:10.3f} MB max RSS, utxo: {}",
+                        cib.blockHeight(),
+                        res.jsonData.size(),
+                        util::maxRss() / 1048576.0,
+                        *utxo);
                 }
             }
 
