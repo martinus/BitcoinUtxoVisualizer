@@ -103,11 +103,14 @@ public:
     // Removes the utxo, and returns the amount & blockheight when it was added.
     [[nodiscard]] auto remove(TxIdPrefix const& txIdPrefix, uint16_t vout) -> std::pair<int64_t, uint32_t> {
         if (auto it = mTxidToUtxos.find(txIdPrefix); it != mTxidToUtxos.end()) {
-            auto [satoshi, newChunk] = mChunkStore.remove(vout, it->second.chunk());
+            auto* oldRoot = it->second.chunk();
+            auto [satoshi, newRoot] = mChunkStore.remove(vout, oldRoot);
             auto blockHeight = it->second.blockHeight();
-            if (newChunk == nullptr) {
+            if (newRoot == nullptr) {
                 // whole transaction was consumed, remove it from the map
                 mTxidToUtxos.erase(it);
+            } else if (newRoot != oldRoot) {
+                it->second.chunk(newRoot);
             }
             return std::make_pair(satoshi, blockHeight);
         }

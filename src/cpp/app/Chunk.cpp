@@ -76,16 +76,11 @@ auto ChunkStore::insert(uint16_t vout, int64_t satoshi, Chunk* c) -> Chunk* {
     return c;
 }
 
-// Removes the entry in the chunklist with the given vout. Might put a free chunk back into the store. Replaces the removed
-// entry with the last enry.
-// @return The removed satoshi value, and nullptreither the chunk or nullptr if the chunk was empty.
+// Removes the entry in the chunklist with the given vout. Returns the removed satoshi, and the new root or nullptr if empty.
 auto ChunkStore::remove(uint16_t vout, Chunk* const c) -> std::pair<int64_t, Chunk*> {
     Chunk* preFoundChunk = nullptr;
     auto* foundChunk = c;
-    while (foundChunk != nullptr) {
-        if (foundChunk->isVout(vout)) {
-            break;
-        }
+    while (foundChunk != nullptr && !foundChunk->isVout(vout)) {
         preFoundChunk = foundChunk;
         foundChunk = foundChunk->next();
     }
@@ -93,31 +88,20 @@ auto ChunkStore::remove(uint16_t vout, Chunk* const c) -> std::pair<int64_t, Chu
         throw std::runtime_error(fmt::format("could not find vout {} in chunk {}", vout, static_cast<void*>(c)));
     }
 
-    // Now we have preFoundChunk, foundChunk, foundIdx. Do the same for lastChunk
+    auto retVal = foundChunk->voutSatoshi().satoshi();
+    foundChunk->voutSatoshi() = {};
 
-    auto* preLastChunk = preFoundChunk;
-    auto* lastChunk = foundChunk;
-    while (lastChunk->next() != nullptr) {
-        preLastChunk = lastChunk;
-        lastChunk = lastChunk->next();
+    if (preFoundChunk != nullptr) {
+        // unlink foundChunk
+        preFoundChunk->next(foundChunk->next());
+        putIntoStore(foundChunk);
+        return std::make_pair(retVal, c);
     }
 
-    // Now we have preLastChunk, lastChunk. Everything we need to replace and remove!
-
-    auto retVal = std::exchange(foundChunk->voutSatoshi(), lastChunk->voutSatoshi());
-    lastChunk->voutSatoshi() = {};
-
-    // if lastChunk is empty, unlink it
-    if (preLastChunk != nullptr) {
-        preLastChunk->next(nullptr);
-    }
-    putIntoStore(lastChunk);
-    if (lastChunk == c) {
-        // whole list is empty!
-        return std::pair<int64_t, Chunk*>(retVal.satoshi(), nullptr);
-    }
-
-    return std::make_pair(retVal.satoshi(), c);
+    // preFoundChunk is nullptr, that means foundChunk == c
+    auto* newRoot = foundChunk->next();
+    putIntoStore(foundChunk);
+    return std::make_pair(retVal, newRoot);
 }
 
 } // namespace buv

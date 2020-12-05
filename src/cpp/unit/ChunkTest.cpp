@@ -21,12 +21,12 @@ TEST_CASE("chunk_single") {
     // remove first entry
     auto [satoshi, newChunk] = chunkStore.remove(12, chunk);
     REQUIRE(satoshi == 12345);
-    REQUIRE(newChunk == chunk);
+    REQUIRE(newChunk == chunk2);
 
     // last entry moved forward
-    REQUIRE(chunk->voutSatoshi() == buv::VoutSatoshi{13, 4444});
-    REQUIRE(chunk->next() == nullptr);
-    std::tie(satoshi, newChunk) = chunkStore.remove(13, chunk);
+    REQUIRE(newChunk->voutSatoshi() == buv::VoutSatoshi{13, 4444});
+    REQUIRE(newChunk->next() == nullptr);
+    std::tie(satoshi, newChunk) = chunkStore.remove(13, newChunk);
     REQUIRE(newChunk == nullptr);
     REQUIRE(satoshi == 4444);
 }
@@ -92,7 +92,7 @@ TEST_CASE("chunk_random") {
             if (voutAndSatoshi.empty()) {
                 REQUIRE(newBaseChunk == nullptr);
             } else {
-                REQUIRE(newBaseChunk == baseChunk);
+                REQUIRE(newBaseChunk != nullptr);
             }
             REQUIRE(satoshi == removed.satoshi());
         }
