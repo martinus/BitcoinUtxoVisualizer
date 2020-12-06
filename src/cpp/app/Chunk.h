@@ -49,6 +49,10 @@ public:
     [[nodiscard]] constexpr auto operator==(VoutSatoshi const& other) const -> bool {
         return mVoutAndSatoshi == other.mVoutAndSatoshi;
     }
+
+    [[nodiscard]] constexpr auto isVout(uint16_t vout) const -> bool {
+        return static_cast<uint16_t>(mVoutAndSatoshi) == vout;
+    }
 };
 
 // Chunk contains multiple VoutSatoshi, and links to the next one.
@@ -88,7 +92,7 @@ public:
 
     // finds an entry with fout, returns index or numeric_limits<size_t>::max() if not found. Does NOT follow next().
     [[nodiscard]] constexpr auto isVout(uint16_t vout) const -> bool {
-        return mVoutSatoshi.vout() == vout;
+        return mVoutSatoshi.isVout(vout);
     }
 
     [[nodiscard]] constexpr auto next() -> Chunk* {

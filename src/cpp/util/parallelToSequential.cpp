@@ -78,7 +78,7 @@ void parallelToSequential(SequenceId sequenceSize,
                     // sequential work can be done! process as many as we can
                     while (true) {
                         sequentialWorker(myResourceId, nextSequentialSequenceId);
-                        // work done! make the resource available immediately so ohter workers can continue
+                        // work done! make the resource available immediately so other workers can continue
                         availableResources.push(myResourceId);
 
                         // let's see if the next sequentialId is avaialble

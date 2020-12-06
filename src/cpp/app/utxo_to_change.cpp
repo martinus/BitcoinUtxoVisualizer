@@ -23,6 +23,9 @@ using namespace std::literals;
 
 namespace {
 
+// 5781.343 src/cpp/app/utxo_to_change.cpp(134) |     660105 height,    7788404 bytes,   6377.508 MB max RSS, utxo: (  80314186
+// txids,  115288432 vout's used,  117964800 allocated (  18 bulk))
+
 [[nodiscard]] auto integrateBlockData(simdjson::dom::element const& blockData, buv::Utxo& utxo) -> buv::ChangesInBlock {
     auto cib = buv::ChangesInBlock();
     cib.beginBlock(blockData["height"].get_uint64());
