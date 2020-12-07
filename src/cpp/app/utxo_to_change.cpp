@@ -100,7 +100,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto fout = std::ofstream(std::filesystem::path(dataDir) / "changes.blk1", std::ios::binary | std::ios::out);
     auto utxo = std::make_unique<buv::Utxo>();
 
-    auto resources = std::vector<ResourceData>(std::thread::hardware_concurrency() * 10);
+    auto resources = std::vector<ResourceData>(std::thread::hardware_concurrency() * 2);
     for (auto& resource : resources) {
         resource.cli = util::HttpClient::create(bitcoinRpcUrl);
     }

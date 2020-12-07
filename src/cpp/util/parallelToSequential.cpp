@@ -1,5 +1,6 @@
 #include "parallelToSequential.h"
 
+#include <util/ConcurrentQueue.h>
 #include <util/ConcurrentStack.h>
 
 #include <atomic>
@@ -29,23 +30,26 @@ void parallelToSequential(SequenceId sequenceSize,
 }
 
 // Two threadsafe queues: availableResources, and finishedParallelWork.
-// * Parallel workers take a resourceId & next sequentialId, process, then put their resourceId & sequentialId result into finishedParallelWork.
+// * Parallel workers take a resourceId & next sequentialId, process, then put their resourceId & sequentialId result into
+// finishedParallelWork.
 // * Sequential worker takes from finishedParallelWork, and creates a map sequenceId -> resourceId.
-//   If the next sequentialId is available, remove it from the map and perform sequential processing. Put resource back for the next parallel worker.
+//   If the next sequentialId is available, remove it from the map and perform sequential processing. Put resource back for the
+//   next parallel worker.
 void parallelToSequential(SequenceId sequenceSize,
                           ResourceId numResources,
                           ConcurrentWorkers numConcurrentWorkers,
                           std::function<void(ResourceId, SequenceId)> const& parallelWorker,
                           std::function<void(ResourceId, SequenceId)> const& sequentialWorker) {
 
-    // fill up stack with all resourceIds
+    // fill up stack with all resourceIds. We use a stack and not a queue, because we ideally don't want to make use of all the
+    // resources, so fewer memory is allocated.
     auto availableResources = util::ConcurrentStack<ResourceId>();
     for (auto resourceId = ResourceId{}; resourceId != numResources; ++resourceId) {
         availableResources.push(resourceId);
     }
 
-    // nextSequentialSequenceId and finishedSequenceIds are protected by mutex
-    auto finishedParallelWork = util::ConcurrentStack<std::pair<ResourceId, SequenceId>>();
+    // using a FIFO queue. Not really necessary, but a bit more natural
+    auto finishedParallelWork = util::ConcurrentQueue<std::pair<ResourceId, SequenceId>>();
 
     // atomic sequence id
     auto atomicSequenceId = std::atomic<size_t>(0);
@@ -70,7 +74,7 @@ void parallelToSequential(SequenceId sequenceSize,
 
                 // now that parallel work has finished, put our sequenceId and resourceId into the container for sequential
                 // processing
-                finishedParallelWork.push(myResourceId, mySequenceId);
+                finishedParallelWork.emplace(myResourceId, mySequenceId);
             }
         });
     }
@@ -79,21 +83,16 @@ void parallelToSequential(SequenceId sequenceSize,
     auto nextSequentialSequenceId = SequenceId();
     auto finishedSequenceToResource = std::unordered_map<SequenceId, ResourceId>();
 
-    while (nextSequentialSequenceId < sequenceSize) {
+    while (nextSequentialSequenceId != sequenceSize) {
         // fetch from finished parallel work
         auto [resourceId, sequenceId] = finishedParallelWork.pop();
         finishedSequenceToResource.emplace(sequenceId, resourceId);
 
         // process all the sequential work that can be done
-        while (nextSequentialSequenceId < sequenceSize) {
-            auto it = finishedSequenceToResource.find(nextSequentialSequenceId);
-            if (it != finishedSequenceToResource.end()) {
-                resourceId = it->second;
-                finishedSequenceToResource.erase(it);
-            } else {
-                // nextSequentialSequenceId has not finished yet
-                break;
-            }
+        auto it = finishedSequenceToResource.find(nextSequentialSequenceId);
+        while (it != finishedSequenceToResource.end()) {
+            resourceId = it->second;
+            finishedSequenceToResource.erase(it);
 
             // process the work, afterwards immediately make the resource available so other workers can continue
             sequentialWorker(resourceId, nextSequentialSequenceId);
@@ -101,6 +100,7 @@ void parallelToSequential(SequenceId sequenceSize,
 
             // let's see if the next sequentialId is avaialble
             ++nextSequentialSequenceId;
+            it = finishedSequenceToResource.find(nextSequentialSequenceId);
         }
     }
 

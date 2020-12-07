@@ -1,45 +1,29 @@
-#pragma once
+#include "ConcurrentPushPopContainer.h"
 
-#include <condition_variable>
-#include <mutex>
-#include <stack>
 #include <vector>
 
 namespace util {
 
-// a simple queue where pop() blocks if the queue is empty.
-template <typename T>
-class ConcurrentStack {
-    std::stack<T, std::vector<T>> mStack{};
-    mutable std::mutex mMutex{};
-    std::condition_variable mCond{};
+namespace detail {
 
-public:
-    // Returns an item. blocks if the stack is empty.
-    auto pop() -> T {
-        auto lock = std::unique_lock(mMutex);
-        while (mStack.empty()) {
-            mCond.wait(lock);
-        }
-        auto item = std::move(mStack.top());
-        mStack.pop();
+template <typename T>
+struct PushPop<T, std::vector<T>> {
+    template <typename... Args>
+    void push(std::vector<T>& q, Args&&... args) {
+        q.emplace_back(std::forward<Args>(args)...);
+    }
+
+    auto pop(std::vector<T>& q) -> T {
+        auto item = std::move(q.back());
+        q.pop_back();
         return item;
     }
-
-    template <typename... Args>
-    void push(Args&&... args) {
-        {
-            auto lock = std::unique_lock(mMutex);
-            mStack.emplace(std::forward<Args>(args)...);
-        }
-        // notify outside of the lock, so another waiting thread can immediately acquire the lock
-        mCond.notify_one();
-    }
-
-    auto size() const -> size_t {
-        auto lock = std::unique_lock(mMutex);
-        return mStack.size();
-    }
 };
+
+} // namespace detail
+
+// push/emplace inserts at top, pop removes at top.
+template <typename T>
+using ConcurrentStack = ConcurrentPushPopContainer<T, std::vector<T>>;
 
 } // namespace util
