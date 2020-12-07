@@ -25,10 +25,9 @@ endif(CCACHE_PROGRAM)
 
 add_executable(${PROJECT_NAME} "")
 
-# load OpenCV
+# needs OpenCV
 find_package(OpenCV REQUIRED)
-MESSAGE(STATUS "Include dirs ${OpenCV_INCLUDE_DIRS}")
-MESSAGE(STATUS "LINK LIBRARIES ${OpenCV_LIBS}")
+MESSAGE(STATUS "OpenCV ${OpenCV_VERSION}")
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
 add_subdirectory(src)

@@ -21,6 +21,7 @@ target_sources_local(${PROJECT_NAME}
         unit/BlockEncoderTest.cpp
         unit/ChunkTest.cpp
         unit/HexTest.cpp
+        unit/OpenCVTest.cpp
         unit/parallelToSequentialTest.cpp
         unit/VarIntTest.cpp
         util/doctest.cpp
