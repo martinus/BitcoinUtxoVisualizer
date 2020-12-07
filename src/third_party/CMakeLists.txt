@@ -21,12 +21,6 @@ target_sources(${PROJECT_NAME}
         "${CMAKE_CURRENT_SOURCE_DIR}/fmt/src/os.cc"
 )
 
-# font-chef
-add_subdirectory(font-chef EXCLUDE_FROM_ALL)
-find_package(font-chef)
-target_link_libraries(${PROJECT_NAME} PUBLIC font-chef)
-
-
 # nanobench
 target_include_directories(${PROJECT_NAME}
     PUBLIC
