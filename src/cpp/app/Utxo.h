@@ -102,7 +102,7 @@ class Utxo {
 public:
     Utxo() {
         // we certainly have to keep a lot of data around. Reserve because we know we'll need it
-        mTxidToUtxos.reserve(50'000'000);
+        mTxidToUtxos.reserve(100'000'000);
     }
 
     // Removes the utxo, and returns the amount & blockheight when it was added.

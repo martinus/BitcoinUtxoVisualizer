@@ -3,7 +3,6 @@
 #include <util/ConcurrentStack.h>
 
 #include <atomic>
-#include <mutex>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -29,10 +28,10 @@ void parallelToSequential(SequenceId sequenceSize,
         sequenceSize, numResources, ConcurrentWorkers{std::thread::hardware_concurrency()}, parallelWorker, sequentialWorker);
 }
 
-// Some TODO's:
-//
-// * Sequential processing blocks parallel processing. Don't do this.
-// * Main thread should also do work, instead of just join().
+// Two threadsafe queues: availableResources, and finishedParallelWork.
+// * Parallel workers take a resourceId & next sequentialId, process, then put their resourceId & sequentialId result into finishedParallelWork.
+// * Sequential worker takes from finishedParallelWork, and creates a map sequenceId -> resourceId.
+//   If the next sequentialId is available, remove it from the map and perform sequential processing. Put resource back for the next parallel worker.
 void parallelToSequential(SequenceId sequenceSize,
                           ResourceId numResources,
                           ConcurrentWorkers numConcurrentWorkers,
@@ -46,9 +45,7 @@ void parallelToSequential(SequenceId sequenceSize,
     }
 
     // nextSequentialSequenceId and finishedSequenceIds are protected by mutex
-    auto nextSequentialSequenceId = SequenceId();
-    auto finishedSequenceToResource = std::unordered_map<SequenceId, ResourceId>();
-    auto mutex = std::mutex();
+    auto finishedParallelWork = util::ConcurrentStack<std::pair<ResourceId, SequenceId>>();
 
     // atomic sequence id
     auto atomicSequenceId = std::atomic<size_t>(0);
@@ -73,33 +70,41 @@ void parallelToSequential(SequenceId sequenceSize,
 
                 // now that parallel work has finished, put our sequenceId and resourceId into the container for sequential
                 // processing
-                auto lock = std::scoped_lock(mutex);
-                if (mySequenceId == nextSequentialSequenceId) {
-                    // sequential work can be done! process as many as we can
-                    while (true) {
-                        sequentialWorker(myResourceId, nextSequentialSequenceId);
-                        // work done! make the resource available immediately so other workers can continue
-                        availableResources.push(myResourceId);
-
-                        // let's see if the next sequentialId is avaialble
-                        ++nextSequentialSequenceId;
-                        auto it = finishedSequenceToResource.find(nextSequentialSequenceId);
-                        if (it != finishedSequenceToResource.end()) {
-                            myResourceId = it->second;
-                            finishedSequenceToResource.erase(it);
-                        } else {
-                            // nextSequentialSequenceId has not finished yet
-                            break;
-                        }
-                    }
-                } else {
-                    // can't  process sequentially, put sequenceId into container for another worker
-                    finishedSequenceToResource.emplace(mySequenceId, myResourceId);
-                }
+                finishedParallelWork.push(myResourceId, mySequenceId);
             }
         });
     }
 
+    // sequential worker takes items from finishedParalleWork and processes all it can.
+    auto nextSequentialSequenceId = SequenceId();
+    auto finishedSequenceToResource = std::unordered_map<SequenceId, ResourceId>();
+
+    while (nextSequentialSequenceId < sequenceSize) {
+        // fetch from finished parallel work
+        auto [resourceId, sequenceId] = finishedParallelWork.pop();
+        finishedSequenceToResource.emplace(sequenceId, resourceId);
+
+        // process all the sequential work that can be done
+        while (nextSequentialSequenceId < sequenceSize) {
+            auto it = finishedSequenceToResource.find(nextSequentialSequenceId);
+            if (it != finishedSequenceToResource.end()) {
+                resourceId = it->second;
+                finishedSequenceToResource.erase(it);
+            } else {
+                // nextSequentialSequenceId has not finished yet
+                break;
+            }
+
+            // process the work, afterwards immediately make the resource available so other workers can continue
+            sequentialWorker(resourceId, nextSequentialSequenceId);
+            availableResources.push(resourceId);
+
+            // let's see if the next sequentialId is avaialble
+            ++nextSequentialSequenceId;
+        }
+    }
+
+    // make sure all threads finish
     for (auto& worker : parallelWorkers) {
         worker.join();
     }

@@ -13,7 +13,7 @@ target_sources_local(${PROJECT_NAME}
         app/parse_block.cpp
         app/show_block_changes.cpp
         app/utxo_to_change.cpp
-        app/UtxoV2.cpp
+        app/Utxo.cpp
         app/Visualizer.cpp
         buv/SocketStream.cpp
         unit/BlockEncoderTest.cpp
