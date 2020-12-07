@@ -31,7 +31,7 @@ TEST_CASE("visualizer" * doctest::skip()) {
 
     auto throttler = util::ThrottlePeriodic(1000ms);
 
-    buv::forEachChange("../../out/blocks/changes.blk1", [&](buv::ChangesInBlock const& cib) {
+    buv::forEachChange("/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1", [&](buv::ChangesInBlock const& cib) {
         LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
 
         density.begin_block(cib.blockHeight());
