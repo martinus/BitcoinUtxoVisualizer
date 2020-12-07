@@ -1,7 +1,6 @@
 .vscode
 .clangd
 .cache
-src/third_party
 build/
 out/
 
