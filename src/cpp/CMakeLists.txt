@@ -4,6 +4,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_sources_local(${PROJECT_NAME}
     PRIVATE
+        util/HttpClient.cpp # put first because it is soooo slow
+
         app/BlockEncoder.cpp
         app/check_blocks.cpp
         app/Chunk.cpp
@@ -23,7 +25,6 @@ target_sources_local(${PROJECT_NAME}
         unit/VarIntTest.cpp
         util/doctest.cpp
         util/hex.cpp
-        util/HttpClient.cpp
         util/kbhit.cpp
         util/Mmap.cpp
         util/nanobench.cpp

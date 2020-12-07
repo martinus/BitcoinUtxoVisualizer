@@ -52,8 +52,7 @@ class SocketStreamImpl final : public SocketStream {
     sockaddr_in mServAddr{};
 
 public:
-    SocketStreamImpl(char const* ip_addr, uint16_t socket_nr)
-        : SocketStream() {
+    SocketStreamImpl(char const* ip_addr, uint16_t socket_nr) {
         mSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (mSocket < 0) {
             throw std::runtime_error("could not create socket");

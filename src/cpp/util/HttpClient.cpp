@@ -10,8 +10,15 @@ class HttpClientImpl : public HttpClient {
 
 public:
     explicit HttpClientImpl(char const* schemeHostPort)
-        : HttpClient()
-        , mClient(schemeHostPort) {}
+        : mClient(schemeHostPort) {}
+
+    // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall)
+    ~HttpClientImpl() override = default;
+
+    HttpClientImpl(HttpClientImpl const&) = delete;
+    HttpClientImpl(HttpClientImpl&&) = delete;
+    auto operator=(HttpClientImpl const&) -> HttpClientImpl& = delete;
+    auto operator=(HttpClientImpl&&) -> HttpClientImpl& = delete;
 
     [[nodiscard]] auto get(char const* path) -> std::string override {
         auto res = mClient.Get(path);
