@@ -43,6 +43,12 @@ public:
         return mRgb.data() + (idx * 3);
     }
 
+    [[nodiscard]] auto color(int idx) const -> std::array<uint8_t, 3> {
+        auto col = std::array<uint8_t, 3>();
+        write_rgb(idx, col.data());
+        return col;
+    }
+
     void write_rgb(int value, uint8_t* target) const {
         int idx = value * 3;
         target[0] = mRgb[idx];
@@ -73,6 +79,19 @@ public:
         if (colorMapName == "viridis") {
             return viridis();
         }
+        if (colorMapName == "magma") {
+            return magma();
+        }
+        if (colorMapName == "parula") {
+            return parula();
+        }
+        if (colorMapName == "turbo") {
+            return turbo();
+        }
+        if (colorMapName == "spacious") {
+            return spacious();
+        }
+
         throw std::runtime_error("unknown color name");
     }
 

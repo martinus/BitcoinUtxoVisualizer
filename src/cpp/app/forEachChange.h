@@ -3,21 +3,18 @@
 #include <app/BlockEncoder.h>
 #include <util/Mmap.h>
 
-#include <fmt/core.h>
-
 #include <filesystem>
 
 namespace buv {
 
 template <typename Op>
-void forEachChange(std::filesystem::path const& blkFilename, Op op) {
-    auto mmapedFile = util::Mmap(blkFilename);
-    if (!mmapedFile.is_open()) {
-        throw std::runtime_error(fmt::format("could not open file {}", blkFilename.string()));
+void forEachChange(util::Mmap const& mmappedFile, Op op) {
+    if (!mmappedFile.is_open()) {
+        throw std::runtime_error("file not open");
     }
 
-    auto const* ptr = mmapedFile.begin();
-    auto const* end = mmapedFile.end();
+    auto const* ptr = mmappedFile.begin();
+    auto const* end = mmappedFile.end();
 
     auto cib = buv::ChangesInBlock();
     while (ptr != end) {
@@ -25,6 +22,22 @@ void forEachChange(std::filesystem::path const& blkFilename, Op op) {
         // NOLINTNEXTLINE(bugprone-use-after-move,hicpp-invalid-access-moved)
         op(cib);
     }
+}
+
+[[nodiscard]] inline auto numBlocks(util::Mmap const& mmappedFile) -> size_t {
+    if (!mmappedFile.is_open()) {
+        throw std::runtime_error("file not open");
+    }
+
+    auto const* ptr = mmappedFile.begin();
+    auto const* end = mmappedFile.end();
+
+    auto blockHeight = uint32_t();
+    while (ptr != end) {
+        std::tie(blockHeight, ptr) = buv::ChangesInBlock::skip(ptr);
+    }
+
+    return blockHeight + 1;
 }
 
 } // namespace buv

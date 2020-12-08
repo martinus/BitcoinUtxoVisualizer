@@ -32,9 +32,14 @@ TEST_CASE("visualizer" * doctest::skip()) {
     auto density = buv::Density(cfg);
     auto throttler = util::ThrottlePeriodic(1000ms);
 
+    auto file = util::Mmap(cfg.blkFile);
+    auto numBlocks = buv::numBlocks(file);
+    LOG("{} blocks, overwritting cfg with that setting", numBlocks);
+    cfg.maxBlockHeight = numBlocks - 1;
+
     auto socketStream = buv::SocketStream::create(cfg.connectionIpAddr.c_str(), cfg.connectionSocket);
 
-    buv::forEachChange(cfg.blkFile, [&](buv::ChangesInBlock const& cib) {
+    buv::forEachChange(file, [&](buv::ChangesInBlock const& cib) {
         LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
 
         density.begin_block(cib.blockHeight());

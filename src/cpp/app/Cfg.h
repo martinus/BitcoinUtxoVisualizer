@@ -20,6 +20,8 @@ struct Cfg {
     uint16_t connectionSocket = 12987;
     std::string colorMap = "viridis";
     size_t colorUpperValueLimit = 4000U;
+    std::array<uint8_t, 3> colorHighlightRGB{};
+    std::array<uint8_t, 3> colorBackgroundRGB{};
 };
 
 auto parseCfg(std::filesystem::path const& cfgFile) -> Cfg;

@@ -34,7 +34,8 @@ public:
         , m_last_data(nullptr)
         , m_pixel_set_with_history(cfg.pixelWidth * cfg.pixelHeight, 50)
         , m_current_block_pixels(cfg.pixelWidth * cfg.pixelHeight)
-        , m_density_to_image(cfg.pixelWidth, cfg.pixelHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMap))
+        , m_density_to_image(
+              cfg.pixelWidth, cfg.pixelHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMap), cfg.colorBackgroundRGB)
         , m_current_block_height(0)
         , m_prev_block_height(-1)
         , m_prev_amount(-1) {}
@@ -136,18 +137,15 @@ public:
             rgb_data[1] = rgb[1];
             rgb_data[2] = rgb[2];
             rgb_data += 3;
-            int const x = block_height - blockheight_pixelidx.block_height;
+            int const age = block_height - blockheight_pixelidx.block_height;
 
-            // use the inverted color as the basis
             int const max_hist = static_cast<int>(m_pixel_set_with_history.max_history());
-            int const fact = (2 * x + max_hist) / 3;
-            int const opposite = 255 * 2 * (max_hist - x) / 3;
 
-            rgb[0] = (rgb[0] * fact + opposite) / max_hist;
-            rgb[1] = (rgb[1] * fact + opposite) / max_hist;
-            rgb[2] = (rgb[2] * fact + opposite) / max_hist;
+            // linear interpolate between colorHighlightRGB (0 age), and original color (max_hist age)
+            rgb[0] = (rgb[0] * age + mCfg.colorHighlightRGB[0] * (max_hist - age)) / max_hist;
+            rgb[1] = (rgb[1] * age + mCfg.colorHighlightRGB[1] * (max_hist - age)) / max_hist;
+            rgb[2] = (rgb[2] * age + mCfg.colorHighlightRGB[2] * (max_hist - age)) / max_hist;
         }
-
         op(m_density_to_image.width(), m_density_to_image.height(), m_density_to_image.data());
 
         // now re-update all the updated pixels that have changed since the last update

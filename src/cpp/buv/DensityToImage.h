@@ -18,19 +18,27 @@ class DensityToImage {
 public:
     // initialize with background color
     // calculates the factor so that max_value is the last integer value that mapps to 255.
-    DensityToImage(size_t width, size_t height, size_t max_included_value, ColorMap colormap)
+    DensityToImage(
+        size_t width, size_t height, size_t max_included_value, ColorMap colormap, std::array<uint8_t, 3> /*colorBackground*/)
         : m_colormap(std::move(colormap))
         , m_rgb(3 * width * height, 0)
         , m_fact(256.0 / std::log(max_included_value + 1))
         , m_max_included_value(max_included_value)
         , mWidth(width)
-        , mHeight(height) {}
+        , mHeight(height)
+        , mColorBackground(m_colormap.color(0)) {
+
+        // fill with lowest colormap's value
+        for (size_t i = 0; i < width * height; ++i) {
+            rgb(i, mColorBackground.data());
+        }
+    }
 
     void update(size_t pixel_idx, size_t density) {
-        static constexpr auto black = std::array<uint8_t, 3>();
+        // static constexpr auto black = std::array<uint8_t, 3>();
         uint8_t const* rgb_source = nullptr;
         if (0 == density) {
-            rgb_source = black.data();
+            rgb_source = mColorBackground.data();
         } else if (density >= m_max_included_value) {
             rgb_source = m_colormap.rgb(255);
         } else {
@@ -78,6 +86,7 @@ private:
     size_t const m_max_included_value;
     size_t mWidth{};
     size_t mHeight{};
+    std::array<uint8_t, 3> mColorBackground{};
 };
 
 inline auto operator<<(std::ostream& os, DensityToImage const& dti) -> std::ostream& {
