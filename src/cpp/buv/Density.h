@@ -5,7 +5,6 @@
 #include <buv/LinearFunction.h>
 #include <buv/PixelSet.h>
 #include <buv/PixelSetWithHistory.h>
-#include <buv/SocketStream.h>
 #include <buv/truncate.h>
 #include <util/log.h>
 
@@ -32,7 +31,7 @@ public:
         std::string connectionIpAddr = "127.0.0.1";
         uint16_t connectionSocket = 12987;
         ColorMapType colorMapType = buv::ColorMapType::viridis;
-        size_t colorUpperValueLimit = 2000U;
+        size_t colorUpperValueLimit = 4000U;
     };
 
     explicit Density(Cfg const& cfg)
@@ -49,7 +48,6 @@ public:
         , m_last_data(nullptr)
         , m_pixel_set_with_history(cfg.pixelWidth * cfg.pixelHeight, 50)
         , m_current_block_pixels(cfg.pixelWidth * cfg.pixelHeight)
-        , m_socket_stream(SocketStream::create(mCfg.connectionIpAddr.c_str(), cfg.connectionSocket))
         , m_density_to_image(cfg.pixelWidth, cfg.pixelHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMapType))
         , m_current_block_height(0)
         , m_prev_block_height(-1)
@@ -92,7 +90,8 @@ public:
         m_prev_block_height = block_height;
     }
 
-    void end_block(uint32_t block_height) {
+    template <typename Op>
+    void end_block(uint32_t block_height, Op op) {
         if (block_height < mCfg.startShowAtBlockHeight) {
             return;
         }
@@ -163,9 +162,7 @@ public:
             rgb[2] = (rgb[2] * fact + opposite) / max_hist;
         }
 
-        // if (block_height > 400'000) {
-        m_socket_stream->write(m_density_to_image.data(), m_density_to_image.size());
-        //}
+        op(m_density_to_image.width(), m_density_to_image.height(), m_density_to_image.data());
 
         // now re-update all the updated pixels that have changed since the last update
         rgb_data = previous_rgb_values.data();
@@ -196,7 +193,6 @@ private:
     size_t* m_last_data;
     PixelSetWithHistory m_pixel_set_with_history;
     PixelSet m_current_block_pixels;
-    std::unique_ptr<SocketStream> m_socket_stream;
     DensityToImage m_density_to_image;
     uint32_t m_current_block_height;
 

@@ -1,5 +1,6 @@
 #include <app/forEachChange.h>
 #include <buv/Density.h>
+#include <buv/SocketStream.h>
 #include <util/Throttle.h>
 #include <util/log.h>
 
@@ -34,15 +35,16 @@ TEST_CASE("visualizer" * doctest::skip()) {
     cfg.minBlockHeight = 0;
     cfg.maxBlockHeight = 658'000;
 
-    cfg.startShowAtBlockHeight = 300'000;
+    cfg.startShowAtBlockHeight = 200'000;
     cfg.connectionIpAddr = "127.0.0.1";
     cfg.connectionSocket = 12987;
     cfg.colorMapType = buv::ColorMapType::viridis;
     cfg.colorUpperValueLimit = 500;
 
-
     auto density = buv::Density(cfg);
     auto throttler = util::ThrottlePeriodic(1000ms);
+
+    auto socketStream = buv::SocketStream::create(cfg.connectionIpAddr.c_str(), cfg.connectionSocket);
 
     buv::forEachChange("/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1", [&](buv::ChangesInBlock const& cib) {
         LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
@@ -54,6 +56,8 @@ TEST_CASE("visualizer" * doctest::skip()) {
             // maxBlockAmount = std::max(std::abs(change.satoshi()), maxBlockAmount);
         }
         // LOG("{}: {}", cib.blockHeight(), maxBlockAmount);
-        density.end_block(cib.blockHeight());
+        density.end_block(cib.blockHeight(), [&](size_t width, size_t height, uint8_t const* data) {
+            socketStream->write(data, width * height * 3);
+        });
     });
 }

@@ -22,7 +22,9 @@ public:
         : m_colormap(std::move(colormap))
         , m_rgb(3 * width * height, 0)
         , m_fact(256.0 / std::log(max_included_value + 1))
-        , m_max_included_value(max_included_value) {}
+        , m_max_included_value(max_included_value)
+        , mWidth(width)
+        , mHeight(height) {}
 
     void update(size_t pixel_idx, size_t density) {
         static constexpr auto black = std::array<uint8_t, 3>();
@@ -59,6 +61,14 @@ public:
         return m_rgb.size();
     }
 
+    [[nodiscard]] auto width() const -> size_t {
+        return mWidth;
+    }
+
+    [[nodiscard]] auto height() const -> size_t {
+        return mHeight;
+    }
+
 private:
     friend auto operator<<(std::ostream&, DensityToImage const&) -> std::ostream&;
 
@@ -66,6 +76,8 @@ private:
     std::vector<uint8_t> m_rgb;
     double const m_fact;
     size_t const m_max_included_value;
+    size_t mWidth{};
+    size_t mHeight{};
 };
 
 inline auto operator<<(std::ostream& os, DensityToImage const& dti) -> std::ostream& {
