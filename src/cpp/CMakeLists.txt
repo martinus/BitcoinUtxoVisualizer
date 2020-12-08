@@ -7,6 +7,7 @@ target_sources_local(${PROJECT_NAME}
         util/HttpClient.cpp # put first because it is soooo slow
 
         app/BlockEncoder.cpp
+        app/Cfg.cpp
         app/check_blocks.cpp
         app/Chunk.cpp
         app/decode_change.cpp
@@ -24,6 +25,7 @@ target_sources_local(${PROJECT_NAME}
         unit/OpenCVTest.cpp
         unit/parallelToSequentialTest.cpp
         unit/VarIntTest.cpp
+        util/args.cpp
         util/doctest.cpp
         util/hex.cpp
         util/kbhit.cpp

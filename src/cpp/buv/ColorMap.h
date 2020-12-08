@@ -5,6 +5,7 @@
 #include <exception>
 #include <initializer_list>
 #include <stdexcept>
+#include <string_view>
 #include <vector>
 
 namespace buv {
@@ -66,6 +67,13 @@ public:
         }
 
         throw std::runtime_error("no valid ColorMapType provided");
+    }
+
+    static auto create(std::string_view colorMapName) -> ColorMap {
+        if (colorMapName == "viridis") {
+            return viridis();
+        }
+        throw std::runtime_error("unknown color name");
     }
 
     // More info: https://bids.github.io/colormap/

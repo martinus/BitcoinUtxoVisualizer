@@ -1,5 +1,6 @@
 #pragma once
 
+#include <app/Cfg.h>
 #include <buv/ColorMap.h>
 #include <buv/DensityToImage.h>
 #include <buv/LinearFunction.h>
@@ -19,21 +20,6 @@ namespace buv {
 // Integrates change data into an density image.
 class Density {
 public:
-    struct Cfg {
-        size_t pixelWidth{};
-        size_t pixelHeight{};
-        int64_t minSatoshi{};
-        int64_t maxSatoshi{};
-        uint32_t minBlockHeight{};
-        uint32_t maxBlockHeight{};
-
-        uint32_t startShowAtBlockHeight{};
-        std::string connectionIpAddr = "127.0.0.1";
-        uint16_t connectionSocket = 12987;
-        ColorMapType colorMapType = buv::ColorMapType::viridis;
-        size_t colorUpperValueLimit = 4000U;
-    };
-
     explicit Density(Cfg const& cfg)
         : mCfg(cfg)
         , m_fn_satoshi(std::log(static_cast<double>(cfg.maxSatoshi)),
@@ -48,7 +34,7 @@ public:
         , m_last_data(nullptr)
         , m_pixel_set_with_history(cfg.pixelWidth * cfg.pixelHeight, 50)
         , m_current_block_pixels(cfg.pixelWidth * cfg.pixelHeight)
-        , m_density_to_image(cfg.pixelWidth, cfg.pixelHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMapType))
+        , m_density_to_image(cfg.pixelWidth, cfg.pixelHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMap))
         , m_current_block_height(0)
         , m_prev_block_height(-1)
         , m_prev_amount(-1) {}

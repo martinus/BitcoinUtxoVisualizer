@@ -1,12 +1,15 @@
+#include <app/Cfg.h>
 #include <app/forEachChange.h>
 #include <buv/Density.h>
 #include <buv/SocketStream.h>
 #include <util/Throttle.h>
+#include <util/args.h>
 #include <util/log.h>
 
 #include <doctest.h>
 #include <fmt/chrono.h>
-#include <fmt/format.h>
+#include <fmt/ranges.h>
+#include <simdjson.h>
 
 #include <cmath>
 
@@ -23,30 +26,15 @@ using namespace std::literals;
 //
 // clang-format on
 TEST_CASE("visualizer" * doctest::skip()) {
-    // size_t const width = 3840;
-    // size_t const height = 2160;
-    // size_t const max_included_density = 444;
+    std::filesystem::path cfgFile = util::args::get("-cfg").value();
 
-    auto cfg = buv::Density::Cfg();
-    cfg.pixelWidth = 3840;
-    cfg.pixelHeight = 2160;
-    cfg.minSatoshi = 1;
-    cfg.maxSatoshi = int64_t(10'000) * int64_t(100'000'000);
-    cfg.minBlockHeight = 0;
-    cfg.maxBlockHeight = 658'000;
-
-    cfg.startShowAtBlockHeight = 200'000;
-    cfg.connectionIpAddr = "127.0.0.1";
-    cfg.connectionSocket = 12987;
-    cfg.colorMapType = buv::ColorMapType::viridis;
-    cfg.colorUpperValueLimit = 500;
-
+    auto cfg = buv::parseCfg(cfgFile);
     auto density = buv::Density(cfg);
     auto throttler = util::ThrottlePeriodic(1000ms);
 
     auto socketStream = buv::SocketStream::create(cfg.connectionIpAddr.c_str(), cfg.connectionSocket);
 
-    buv::forEachChange("/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1", [&](buv::ChangesInBlock const& cib) {
+    buv::forEachChange(cfg.blkFile, [&](buv::ChangesInBlock const& cib) {
         LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
 
         density.begin_block(cib.blockHeight());
