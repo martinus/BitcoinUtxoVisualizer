@@ -27,6 +27,12 @@ public:
         int64_t maxSatoshi{};
         uint32_t minBlockHeight{};
         uint32_t maxBlockHeight{};
+
+        uint32_t startShowAtBlockHeight{};
+        std::string connectionIpAddr = "127.0.0.1";
+        uint16_t connectionSocket = 12987;
+        ColorMapType colorMapType = buv::ColorMapType::viridis;
+        size_t colorUpperValueLimit = 2000U;
     };
 
     explicit Density(Cfg const& cfg)
@@ -43,8 +49,8 @@ public:
         , m_last_data(nullptr)
         , m_pixel_set_with_history(cfg.pixelWidth * cfg.pixelHeight, 50)
         , m_current_block_pixels(cfg.pixelWidth * cfg.pixelHeight)
-        , m_socket_stream(SocketStream::create("127.0.0.1", 12987))
-        , m_density_to_image(cfg.pixelWidth, cfg.pixelHeight, 2000, ColorMap::viridis())
+        , m_socket_stream(SocketStream::create(mCfg.connectionIpAddr.c_str(), cfg.connectionSocket))
+        , m_density_to_image(cfg.pixelWidth, cfg.pixelHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMapType))
         , m_current_block_height(0)
         , m_prev_block_height(-1)
         , m_prev_amount(-1) {}
@@ -87,7 +93,7 @@ public:
     }
 
     void end_block(uint32_t block_height) {
-        if (block_height < 657'000) {
+        if (block_height < mCfg.startShowAtBlockHeight) {
             return;
         }
 
@@ -98,21 +104,6 @@ public:
         for (auto const pixel_idx : m_current_block_pixels) {
             size_t const y = pixel_idx / mCfg.pixelWidth;
             size_t const x = pixel_idx - y * mCfg.pixelWidth;
-
-            // make sure we don't get an overflow!
-            /*
-            if (m_current_block_height >= 15 && x > 0 && x + 1 < cfg.pixelWidth && y > 0 && y + 1 < cfg.pixelHeight) {
-                m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx - cfg.pixelWidth - 1);
-                m_pixel_set_with_history.insert(m_current_block_height - 07, pixel_idx - cfg.pixelWidth);
-                m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx - cfg.pixelWidth + 1);
-                m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx - 1);
-                m_pixel_set_with_history.insert(m_current_block_height -  0, pixel_idx);
-                m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx + 1);
-                m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx + cfg.pixelWidth - 1);
-                m_pixel_set_with_history.insert(m_current_block_height - 07, pixel_idx + cfg.pixelWidth);
-                m_pixel_set_with_history.insert(m_current_block_height - 15, pixel_idx + cfg.pixelWidth + 1);
-            }
-                        */
 
             if (m_current_block_height >= 15) {
                 // upper row

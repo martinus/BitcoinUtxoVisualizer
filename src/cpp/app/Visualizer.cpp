@@ -11,10 +11,16 @@
 
 using namespace std::literals;
 
-// recommended settings: https://gist.github.com/mikoim/27e4e0dc64e384adbcb91ff10a2d3678
+// clang-format off
 //
-// fast settings:
-// ffmpeg -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen"  -c:v libx264 -preset ultrafast out.mp4
+// 1. Start ffmpeg or ffplay (see below)
+//    * ffplay -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen"
+//    * ffmpeg -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen" -c:v libx264 -preset ultrafast out.mp4
+//    * recommended settings: https://gist.github.com/mikoim/27e4e0dc64e384adbcb91ff10a2d3678
+//
+// 2. ninja && ./buv -ns -tc=visualizer
+//
+// clang-format on
 TEST_CASE("visualizer" * doctest::skip()) {
     // size_t const width = 3840;
     // size_t const height = 2160;
@@ -27,8 +33,15 @@ TEST_CASE("visualizer" * doctest::skip()) {
     cfg.maxSatoshi = int64_t(10'000) * int64_t(100'000'000);
     cfg.minBlockHeight = 0;
     cfg.maxBlockHeight = 658'000;
-    auto density = buv::Density(cfg);
 
+    cfg.startShowAtBlockHeight = 300'000;
+    cfg.connectionIpAddr = "127.0.0.1";
+    cfg.connectionSocket = 12987;
+    cfg.colorMapType = buv::ColorMapType::viridis;
+    cfg.colorUpperValueLimit = 500;
+
+
+    auto density = buv::Density(cfg);
     auto throttler = util::ThrottlePeriodic(1000ms);
 
     buv::forEachChange("/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1", [&](buv::ChangesInBlock const& cib) {
