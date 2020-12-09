@@ -25,6 +25,9 @@ endif(CCACHE_PROGRAM)
 
 add_executable(${PROJECT_NAME} "")
 
+# required for date to compile with tz.cpp
+#target_compile_options(${PROJECT_NAME} PRIVATE "-DHAS_UNCAUGHT_EXCEPTIONS=1" "-DHAS_REMOTE_API=0")
+
 # needs OpenCV
 find_package(OpenCV REQUIRED)
 MESSAGE(STATUS "OpenCV ${OpenCV_VERSION}")

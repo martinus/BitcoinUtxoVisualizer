@@ -1,9 +1,11 @@
 #include "BlockHeader.h"
 
 #include <util/HttpClient.h>
+#include <util/date.h>
 #include <util/hex.h>
 #include <util/writeBinary.h>
 
+#include <fmt/ostream.h>
 #include <simdjson.h>
 
 #include <chrono>
@@ -94,8 +96,8 @@ auto formatter<buv::BlockHeader>::parse(format_parse_context& ctx) -> format_par
 
 auto formatter<buv::BlockHeader>::format(buv::BlockHeader const& bh, format_context& ctx) -> format_context::iterator {
     auto out = ctx.out();
-
-    format_to(out, "(height={}, time={})", bh.height, bh.height);
+    auto formattedTime = date::format("%F %T %Z", std::chrono::floor<std::chrono::seconds>(bh.time));
+    format_to(out, "(height={}, time={}, hash={})", bh.height, formattedTime, util::toHex(bh.hash));
     return out;
 }
 
