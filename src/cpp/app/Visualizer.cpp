@@ -37,9 +37,8 @@ void saveImagePPM(size_t width, size_t height, uint8_t const* data, std::string 
 //
 // clang-format on
 TEST_CASE("visualizer" * doctest::skip()) {
-    std::filesystem::path cfgFile = util::args::get("-cfg").value();
+    auto cfg = buv::parseCfg(util::args::get("-cfg").value());
 
-    auto cfg = buv::parseCfg(cfgFile);
     auto density = buv::Density(cfg);
     auto throttler = util::ThrottlePeriodic(1000ms);
 

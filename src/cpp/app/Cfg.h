@@ -7,6 +7,8 @@
 namespace buv {
 
 struct Cfg {
+    std::string bitcoinRpcUrl{};
+    
     std::string blkFile{};
     size_t pixelWidth{};
     size_t pixelHeight{};
