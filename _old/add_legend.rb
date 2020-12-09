@@ -6,15 +6,16 @@ resolution_y_pixel = 3840
 resolution_y_blocks = 550000
 blocks_per_image = 30
 
-input_legend = "legend.pgm"
-input = "img/**.png"
+#input_legend = "legend.pgm"
+#input = "img/**.png"
 outdir = "img_with_legend"
 
 headers_file = "headers.bin"
 headers = []
-File.open(headers_file, "rb") do |f|
-	headers = Marshal.load(f)
-end
+
+#File.open(headers_file, "rb") do |f|
+	#headers = Marshal.load(f)
+#end
 
 
 pointsize = 16
@@ -61,7 +62,7 @@ Dir["img/**.png"].each do |input_filename|
 	offset_composite_x = pos_line + offset_x
 
 	# composit drawing
-	cmd = "magick #{input_filename} #{input_legend} -geometry +#{offset_composite_x}+0 -composite"
+	cmd = "magick #{input_filename}"
 	# set up annotations
 	cmd += " -pointsize #{pointsize} -fill snow3"
 
@@ -90,33 +91,23 @@ Dir["img/**.png"].each do |input_filename|
 		off_x = 20
 	end
 
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"hash: #{blk["hash"]}\""	
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"height: #{blk["height"]}\""	
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"version: 0x#{blk["versionHex"]}\""
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"time: #{format_time(blk["time"])}\""
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"mediantime: #{format_time(blk["mediantime"])}\""
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"nonce: #{blk["nonce"]}\""
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"bits: #{blk["bits"]}\""
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"difficulty: #{blk["difficulty"]}\""
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"chainwork: #{blk["chainwork"]}\""
-	cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"nTx: #{blk["nTx"]}\""
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"hash: #{blk["hash"]}\""	
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"height: #{blk["height"]}\""	
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"version: 0x#{blk["versionHex"]}\""
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"time: #{format_time(blk["time"])}\""
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"mediantime: #{format_time(blk["mediantime"])}\""
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"nonce: #{blk["nonce"]}\""
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"bits: #{blk["bits"]}\""
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"difficulty: #{blk["difficulty"]}\""
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"chainwork: #{blk["chainwork"]}\""
+	#cmd += " -annotate +#{off_x}+#{off_y += line_offset} \"nTx: #{blk["nTx"]}\""
 
 	# final output
 	cmd += " -quality 10 #{outfile}"
 
 	# magick img/00017674.png legend.pgm -geometry +3714+0 -quality 10 -composite -pointsize 15 -fill white -annotate +3730+15 "100 kBTC" -quality 100 out.png
-	#cmd = "magick composite -geometry +#{offset}-1 #{input_legend} #{input_filename} -quality 10 #{outfile}"
-	queue.push cmd
+	system(cmd)
+	#queue.push cmd
 end
-queue.push nil
+#queue.push nil
 
-
-workers.each do |w|
-	w.join
-end
-
-puts
-puts "bad files:"
-while !bad_files.empty?
-	puts bad_files.pop
-end

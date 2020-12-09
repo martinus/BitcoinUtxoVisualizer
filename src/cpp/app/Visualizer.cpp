@@ -14,8 +14,16 @@
 #include <simdjson.h>
 
 #include <cmath>
+#include <fstream>
 
 using namespace std::literals;
+
+void saveImagePPM(size_t width, size_t height, uint8_t const* data, std::string const& filename) {
+    // see http://netpbm.sourceforge.net/doc/ppm.html
+    std::ofstream fout(filename, std::ios::binary);
+    fout << "P6\n" << width << " " << height << "\n" << 255 << "\n";
+    fout.write(reinterpret_cast<char const*>(data), width * height * 3U);
+}
 
 // clang-format off
 //
@@ -64,6 +72,12 @@ TEST_CASE("visualizer" * doctest::skip()) {
             case 'q':
                 // quit
                 return false;
+
+            case 's': {
+                auto imgFileName = fmt::format("img_{:07}.ppm", cib.blockHeight());
+                LOG("Writing image '{}'", imgFileName);
+                saveImagePPM(cfg.pixelWidth, cfg.pixelHeight, hud->data(), imgFileName);
+            }
             }
         }
 

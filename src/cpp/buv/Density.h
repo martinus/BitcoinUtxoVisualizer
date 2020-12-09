@@ -3,9 +3,9 @@
 #include <app/Cfg.h>
 #include <buv/ColorMap.h>
 #include <buv/DensityToImage.h>
-#include <buv/LinearFunction.h>
 #include <buv/PixelSet.h>
 #include <buv/PixelSetWithHistory.h>
+#include <buv/SatoshiBlockheightToPixel.h>
 #include <buv/truncate.h>
 #include <util/log.h>
 
@@ -22,14 +22,7 @@ class Density {
 public:
     explicit Density(Cfg const& cfg)
         : mCfg(cfg)
-        , m_fn_satoshi(std::log(static_cast<double>(cfg.maxSatoshi)),
-                       0.0,
-                       std::log(static_cast<double>(cfg.minSatoshi)),
-                       static_cast<double>(cfg.pixelHeight))
-        , m_fn_block(static_cast<double>(cfg.minBlockHeight),
-                     0,
-                     static_cast<double>(cfg.maxBlockHeight),
-                     static_cast<double>(cfg.pixelWidth))
+        , mSatoshiBlockheightToPixel(cfg)
         , m_data(cfg.pixelWidth * cfg.pixelHeight, 0)
         , m_last_data(nullptr)
         , m_pixel_set_with_history(cfg.pixelWidth * cfg.pixelHeight, 50)
@@ -53,13 +46,8 @@ public:
             return;
         }
 
-        auto pixel_x = static_cast<size_t>(m_fn_block(block_height));
-        if (pixel_x > mCfg.pixelWidth - 1) {
-            pixel_x = mCfg.pixelWidth - 1;
-        }
-
-        auto const famount = amount >= 0 ? amount : -amount;
-        auto const pixel_y = truncate<size_t>(0, static_cast<size_t>(m_fn_satoshi(std::log(famount))), mCfg.pixelHeight - 1);
+        auto const pixel_x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(block_height);
+        auto const pixel_y = mSatoshiBlockheightToPixel.satoshiToPixelHeight(amount);
 
         auto pixel_idx = pixel_y * mCfg.pixelWidth + pixel_x;
         static size_t max_pixel_idx = 0;
@@ -163,10 +151,10 @@ public:
     }
 
     // saves current status of the image as a PPM file
-    void save_image_ppm(DensityToImage& toi, std::string const& filename) const {
+    void save_image_ppm(std::string const& filename) const {
         // see http://netpbm.sourceforge.net/doc/ppm.html
         std::ofstream fout(filename, std::ios::binary);
-        fout << "P6\n" << mCfg.pixelWidth << " " << mCfg.pixelHeight << "\n" << 255 << "\n" << toi;
+        fout << "P6\n" << mCfg.pixelWidth << " " << mCfg.pixelHeight << "\n" << 255 << "\n" << m_density_to_image;
     }
 
     ~Density() {
@@ -184,8 +172,7 @@ public:
 
 private:
     Cfg const mCfg;
-    LinearFunction const m_fn_satoshi;
-    LinearFunction const m_fn_block;
+    SatoshiBlockheightToPixel mSatoshiBlockheightToPixel;
     std::vector<size_t> m_data;
     size_t* m_last_data;
     PixelSetWithHistory m_pixel_set_with_history;
