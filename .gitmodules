@@ -16,3 +16,6 @@
 [submodule "src/third_party/cpp-httplib"]
 	path = src/third_party/cpp-httplib
 	url = https://github.com/yhirose/cpp-httplib.git
+[submodule "src/third_party/date"]
+	path = src/third_party/date
+	url = https://github.com/HowardHinnant/date.git
