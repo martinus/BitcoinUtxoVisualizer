@@ -20,7 +20,9 @@ void forEachChange(util::Mmap const& mmappedFile, Op op) {
     while (ptr != end) {
         std::tie(cib, ptr) = buv::ChangesInBlock::decode(std::move(cib), ptr);
         // NOLINTNEXTLINE(bugprone-use-after-move,hicpp-invalid-access-moved)
-        op(cib);
+        if (!op(cib)) {
+            break;
+        }
     }
 }
 

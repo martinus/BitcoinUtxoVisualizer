@@ -146,7 +146,7 @@ public:
             rgb[1] = (rgb[1] * age + mCfg.colorHighlightRGB[1] * (max_hist - age)) / max_hist;
             rgb[2] = (rgb[2] * age + mCfg.colorHighlightRGB[2] * (max_hist - age)) / max_hist;
         }
-        op(m_density_to_image.width(), m_density_to_image.height(), m_density_to_image.data());
+        op(m_density_to_image.data());
 
         // now re-update all the updated pixels that have changed since the last update
         rgb_data = previous_rgb_values.data();
@@ -167,6 +167,19 @@ public:
         // see http://netpbm.sourceforge.net/doc/ppm.html
         std::ofstream fout(filename, std::ios::binary);
         fout << "P6\n" << mCfg.pixelWidth << " " << mCfg.pixelHeight << "\n" << 255 << "\n" << toi;
+    }
+
+    ~Density() {
+        // sort & print pixel densities
+        m_data.erase(std::remove(m_data.begin(), m_data.end(), 0), m_data.end());
+        std::sort(m_data.begin(), m_data.end());
+
+        // print 100 values
+        LOG("100 density values, starting from 0 (min) to max", m_data.size());
+        auto numValues = size_t(100);
+        for (size_t i = 0; i < numValues; ++i) {
+            fmt::print("{}, ", m_data[(m_data.size() - 1) * i / (numValues - 1)]);
+        }
     }
 
 private:

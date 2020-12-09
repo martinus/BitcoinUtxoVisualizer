@@ -26,6 +26,7 @@ TEST_CASE("decode_change" * doctest::skip()) {
 
         // at least a single change should occur, because coinbase
         REQUIRE(!cib.changeAtBlockheights().empty());
+        return true;
     });
 
     auto after = std::chrono::steady_clock::now();

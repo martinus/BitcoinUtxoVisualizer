@@ -20,6 +20,23 @@ enum class ColorMapType {
     spacious,
 };
 
+[[nodiscard]] constexpr auto to_string(ColorMapType colorMapType) {
+    switch (colorMapType) {
+    case ColorMapType::viridis:
+        return "viridis";
+    case ColorMapType::magma:
+        return "magma";
+    case ColorMapType::parula:
+        return "parula";
+    case ColorMapType::turbo:
+        return "turbo";
+    case ColorMapType::spacious:
+        return "spacious";
+    }
+
+    throw std::runtime_error("no valid colormap");
+}
+
 // Maps an uint8_t to a colormap.
 class ColorMap {
 public:
@@ -76,19 +93,19 @@ public:
     }
 
     static auto create(std::string_view colorMapName) -> ColorMap {
-        if (colorMapName == "viridis") {
+        if (colorMapName == to_string(ColorMapType::viridis)) {
             return viridis();
         }
-        if (colorMapName == "magma") {
+        if (colorMapName == to_string(ColorMapType::magma)) {
             return magma();
         }
-        if (colorMapName == "parula") {
+        if (colorMapName == to_string(ColorMapType::parula)) {
             return parula();
         }
-        if (colorMapName == "turbo") {
+        if (colorMapName == to_string(ColorMapType::turbo)) {
             return turbo();
         }
-        if (colorMapName == "spacious") {
+        if (colorMapName == to_string(ColorMapType::spacious)) {
             return spacious();
         }
 
