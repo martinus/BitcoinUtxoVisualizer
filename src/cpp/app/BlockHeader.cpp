@@ -81,3 +81,22 @@ auto BlockHeader::load(std::filesystem::path const& filename) -> std::vector<Blo
 }
 
 } // namespace buv
+
+namespace fmt {
+
+auto formatter<buv::BlockHeader>::parse(format_parse_context& ctx) -> format_parse_context::iterator {
+    const auto* it = ctx.begin();
+    if (it == ctx.end() || *it == '}') {
+        return it;
+    }
+    throw format_error("invalid format");
+}
+
+auto formatter<buv::BlockHeader>::format(buv::BlockHeader const& bh, format_context& ctx) -> format_context::iterator {
+    auto out = ctx.out();
+
+    format_to(out, "(height={}, time={})", bh.height, bh.height);
+    return out;
+}
+
+} // namespace fmt

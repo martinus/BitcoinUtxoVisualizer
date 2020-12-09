@@ -2,6 +2,8 @@
 
 #include <util/HttpClient.h>
 
+#include <fmt/core.h>
+
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -39,3 +41,9 @@ struct BlockHeader {
 };
 
 } // namespace buv
+
+template <>
+struct fmt::formatter<buv::BlockHeader> {
+    static auto parse(fmt::format_parse_context& ctx) -> format_parse_context::iterator;
+    static auto format(buv::BlockHeader const& bh, format_context& ctx) -> format_context::iterator;
+};

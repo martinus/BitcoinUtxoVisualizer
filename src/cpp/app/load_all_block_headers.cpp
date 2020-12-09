@@ -28,5 +28,6 @@ TEST_CASE("load_all_block_headers" * doctest::skip()) {
     auto allBlockHeaders = buv::BlockHeader::load(cfg.blockHeadersFile);
     LOG("done! got {} headers.", allBlockHeaders.size());
 
-    LOG("genesis header: {}", allBlockHeaders.first());
+    LOG("genesis header: {}", allBlockHeaders.front());
+    LOG("newest header: {}", allBlockHeaders.back());
 }

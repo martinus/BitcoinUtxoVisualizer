@@ -4,6 +4,12 @@ target_include_directories(${PROJECT_NAME}
         "${CMAKE_CURRENT_SOURCE_DIR}/cpp-httplib"
 )
 
+# date
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/date/include"
+)
+
 # doctest
 target_include_directories(${PROJECT_NAME}
     PUBLIC
