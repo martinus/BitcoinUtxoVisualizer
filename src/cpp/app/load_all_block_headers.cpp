@@ -1,6 +1,7 @@
+#include <app/BlockHeader.h>
 #include <app/Cfg.h>
-#include <util/HttpClient.h>
 #include <util/args.h>
+#include <util/log.h>
 
 #include <doctest.h>
 #include <fmt/format.h>
@@ -11,36 +12,21 @@
 namespace {}
 
 // Loads & serializes all block headers
+TEST_CASE("fetch_all_block_headers" * doctest::skip()) {
+    auto cfg = buv::parseCfg(util::args::get("-cfg").value());
+    auto allBlockHeaders = buv::BlockHeader::fetch(cfg.bitcoinRpcUrl.c_str());
+    LOG("got {} blocks", allBlockHeaders.size());
+
+    buv::BlockHeader::write(allBlockHeaders, cfg.blockHeadersFile);
+    LOG("wrote blockheaders into '{}'", cfg.blockHeadersFile);
+}
+
 TEST_CASE("load_all_block_headers" * doctest::skip()) {
     auto cfg = buv::parseCfg(util::args::get("-cfg").value());
 
-    static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
-    static constexpr auto genesisBlock = std::string_view("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
+    LOG("Loading '{}'", cfg.blockHeadersFile);
+    auto allBlockHeaders = buv::BlockHeader::load(cfg.blockHeadersFile);
+    LOG("done! got {} headers.", allBlockHeaders.size());
 
-    auto cli = util::HttpClient::create(bitcoinRpcUrl);
-    auto jsonParser = simdjson::dom::parser();
-
-    auto block = genesisBlock;
-    while (true) {
-        auto json = cli->get("/rest/headers/2000/{}.json", block);
-        simdjson::dom::array data = jsonParser.parse(json);
-
-        // auto nextblockhash = std::string_view();
-        for (simdjson::dom::element e : data) {
-            std::string_view hash = e["hash"];
-            uint64_t height = e["height"];
-            uint64_t mediantime = e["mediantime"];
-            double difficulty = e["difficulty"];
-            int64_t nTx = e["nTx"];
-            fmt::print("{}\t{}\t{}\t{}\t{}\n", hash, height, mediantime, difficulty, nTx);
-        }
-        simdjson::dom::element last = data.at(data.size() - 1);
-        if (last["nextblockhash"].get(block) != 0U) {
-            // field not found, break
-            break;
-        }
-
-        // it's ok to use std::string_view for block, because it is available until the parse() call, at which point we already
-        // have used it.
-    }
+    LOG("genesis header: {}", allBlockHeaders.first());
 }

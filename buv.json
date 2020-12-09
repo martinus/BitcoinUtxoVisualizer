@@ -2,6 +2,8 @@
     "bitcoinRpcUrl": "http://127.0.0.1:8332",
 
     "blkFile": "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1",
+    "blockHeadersFile": "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/blockHeaders.bin",
+
     "pixelWidth": 3840,
     "pixelHeight": 2160,
     "minSatoshi": 1,
