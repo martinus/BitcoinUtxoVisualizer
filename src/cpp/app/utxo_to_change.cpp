@@ -1,6 +1,6 @@
 #include <app/BlockEncoder.h>
+#include <app/BlockHeader.h>
 #include <app/Utxo.h>
-#include <app/loadAllBlockHashes.h>
 #include <util/HttpClient.h>
 #include <util/Throttle.h>
 #include <util/hex.h>
@@ -80,9 +80,6 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
     static constexpr auto dataDir = "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer";
 
-    // genesis block, height 0
-    static constexpr auto startBlock = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
-
     // block 645693
     // static constexpr auto startBlock = "0000000000000000000e5c22c24fd31a29d8ecb2c2cec80d3a9cb75b7aa54f18";
 
@@ -92,7 +89,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto cli = util::HttpClient::create(bitcoinRpcUrl);
     auto jsonParser = simdjson::dom::parser();
 
-    auto allBlockHashes = buv::loadAllBlockHashes(cli, startBlock);
+    auto allBlockHeaders = buv::BlockHeader::fetch(cli);
 
     auto throttler = util::ThrottlePeriodic(1s);
     // auto utxoDumpThrottler = util::LogThrottler(20s);
@@ -106,13 +103,13 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     }
 
     util::parallelToSequential(
-        util::SequenceId{allBlockHashes.size()},
+        util::SequenceId{allBlockHeaders.size()},
         util::ResourceId{resources.size()},
         util::ConcurrentWorkers{std::thread::hardware_concurrency()},
 
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             auto& res = resources[resourceId.count()];
-            auto& hash = allBlockHashes[sequenceId.count()];
+            auto hash = util::toHex(allBlockHeaders[sequenceId.count()].hash);
 
             res.jsonData = res.cli->get("/rest/block/{}.json", hash);
             res.blockData = res.jsonParser.parse(res.jsonData);

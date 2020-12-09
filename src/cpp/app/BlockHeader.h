@@ -1,5 +1,7 @@
 #pragma once
 
+#include <util/HttpClient.h>
+
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -26,7 +28,8 @@ struct BlockHeader {
     uint32_t nTx{};
 
     // Loads everything from bitcoin core node
-    static auto fetchAllFromBitcoinRpc(char const* bitcoinRpcUrl) -> std::vector<BlockHeader>;
+    static auto fetch(char const* bitcoinRpcUrl) -> std::vector<BlockHeader>;
+    static auto fetch(std::unique_ptr<util::HttpClient>& cli) -> std::vector<BlockHeader>;
 
     // Writes everything
     static void write(std::vector<BlockHeader> const& blockHeaders, std::filesystem::path const& filename);

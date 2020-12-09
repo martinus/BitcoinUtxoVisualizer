@@ -11,12 +11,11 @@
 
 namespace buv {
 
-auto BlockHeader::fetchAllFromBitcoinRpc(char const* bitcoinRpcUrl) -> std::vector<BlockHeader> {
-    static constexpr auto genesisBlock = std::string_view("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
-    auto cli = util::HttpClient::create(bitcoinRpcUrl);
+auto BlockHeader::fetch(std::unique_ptr<util::HttpClient>& cli) -> std::vector<BlockHeader> {
     auto jsonParser = simdjson::dom::parser();
 
-    auto block = genesisBlock;
+    // genesis block
+    auto block = std::string_view("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
 
     auto blockHeaders = std::vector<BlockHeader>();
     while (true) {
@@ -38,6 +37,7 @@ auto BlockHeader::fetchAllFromBitcoinRpc(char const* bitcoinRpcUrl) -> std::vect
             bh.nonce = e["nonce"].get_uint64();
             bh.bits = util::fromHex<4>(e["bits"].get_string().value().data());
             bh.nTx = e["nTx"].get_uint64();
+            blockHeaders.push_back(bh);
         }
 
         simdjson::dom::element last = data.at(data.size() - 1);
@@ -51,6 +51,11 @@ auto BlockHeader::fetchAllFromBitcoinRpc(char const* bitcoinRpcUrl) -> std::vect
     }
 
     return blockHeaders;
+}
+
+auto BlockHeader::fetch(char const* bitcoinRpcUrl) -> std::vector<BlockHeader> {
+    auto cli = util::HttpClient::create(bitcoinRpcUrl);
+    return fetch(cli);
 }
 
 // Writes everything

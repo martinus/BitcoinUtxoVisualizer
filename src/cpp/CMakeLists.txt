@@ -15,7 +15,6 @@ target_sources_local(${PROJECT_NAME}
         app/find_distant_color.cpp
         app/Hud.cpp
         app/load_all_block_headers.cpp
-        app/loadAllBlockHashes.cpp
         app/parse_block.cpp
         app/show_block_changes.cpp
         app/utxo_to_change.cpp

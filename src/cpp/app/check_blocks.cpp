@@ -1,4 +1,4 @@
-#include <app/loadAllBlockHashes.h>
+#include <app/BlockHeader.h>
 #include <util/HttpClient.h>
 #include <util/Throttle.h>
 #include <util/hex.h>
@@ -27,9 +27,9 @@ TEST_CASE("check_blocks" * doctest::skip()) {
     static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
     auto cli = util::HttpClient::create(bitcoinRpcUrl);
 
-    // height 557166
-    // auto allBlockHashes = buv::loadAllBlockHashes(cli, "000000000000000000042ed26362c7b1844d7530ed89519467f78a1fdf0b9795");
-    auto allBlockHashes = buv::loadAllBlockHashes(cli);
+    auto allBlockHeaders = buv::BlockHeader::fetch(cli);
+
+    LOG("got {} blocks", allBlockHeaders.size());
 
     auto resources = std::vector<ResourceData>(std::thread::hardware_concurrency() * 2);
     for (auto& resource : resources) {
@@ -39,19 +39,19 @@ TEST_CASE("check_blocks" * doctest::skip()) {
     auto throttler = util::ThrottlePeriodic(1s);
 
     util::parallelToSequential(
-        util::SequenceId{allBlockHashes.size()},
+        util::SequenceId{allBlockHeaders.size()},
         util::ResourceId{resources.size()},
         util::ConcurrentWorkers{std::thread::hardware_concurrency()},
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             auto& res = resources[resourceId.count()];
-            auto& hash = allBlockHashes[sequenceId.count()];
+            auto hash = util::toHex(allBlockHeaders[sequenceId.count()].hash);
 
             res.jsonData = res.cli->get("/rest/block/{}.json", hash);
             res.blockData = res.jsonParser.parse(res.jsonData);
         },
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             auto& res = resources[resourceId.count()];
-            auto& hash = allBlockHashes[sequenceId.count()];
+            auto hash = util::toHex(allBlockHeaders[sequenceId.count()].hash);
 
             LOGIF(throttler(), "block {} at {}, resource {}", hash, sequenceId.count(), resourceId.count());
 
