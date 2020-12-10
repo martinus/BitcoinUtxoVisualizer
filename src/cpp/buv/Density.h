@@ -70,6 +70,11 @@ public:
         if (block_height < mCfg.startShowAtBlockHeight) {
             return;
         }
+#if 0
+        if (block_height % 100 != 0) {
+            return;
+        }
+#endif
 
         for (auto const pixel_idx : m_current_block_pixels) {
             m_density_to_image.update(pixel_idx, m_data[pixel_idx]);
