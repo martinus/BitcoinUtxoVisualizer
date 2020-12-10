@@ -16,17 +16,21 @@ template <typename T>
     }
 }
 
-template <>
-[[nodiscard]] auto load<std::array<uint8_t, 3>>(simdjson::dom::element const& data, char const* name) -> std::array<uint8_t, 3> {
-    auto ary = std::array<uint8_t, 3>();
+template <typename T, size_t S>
+[[nodiscard]] auto loadArray(simdjson::dom::element const& data, char const* name) -> std::array<T, S> {
+    auto ary = std::array<T, S>();
     try {
         auto jsonAry = data[name].get_array();
-        if (jsonAry.size() != 3) {
-            throw std::runtime_error(fmt::format("array size is {} but should be {}", jsonAry.size(), 3));
+        if (jsonAry.size() != S) {
+            throw std::runtime_error(fmt::format("array size is {} but should be {}", jsonAry.size(), S));
         }
 
         for (size_t i = 0; i < ary.size(); ++i) {
-            ary[i] = jsonAry.at(i).get_uint64();
+            if constexpr (std::is_unsigned_v<T>) {
+                ary[i] = jsonAry.at(i).get_int64();
+            } else {
+                ary[i] = jsonAry.at(i).get_uint64();
+            }
         }
         return ary;
     } catch (std::exception const& e) {
@@ -49,17 +53,25 @@ auto parseCfg(std::filesystem::path const& cfgFile) -> Cfg {
     cfg.blkFile = std::string(load<std::string_view>(data, "blkFile"));
     cfg.imageWidth = load<uint64_t>(data, "imageWidth");
     cfg.imageHeight = load<uint64_t>(data, "imageHeight");
+
+    auto rect = loadArray<size_t, 4>(data, "graphRect");
+    cfg.graphRect.x = rect[0];
+    cfg.graphRect.y = rect[1];
+    cfg.graphRect.w = rect[2];
+    cfg.graphRect.h = rect[3];
+
     cfg.minSatoshi = load<int64_t>(data, "minSatoshi");
     cfg.maxSatoshi = load<int64_t>(data, "maxSatoshi");
     cfg.minBlockHeight = load<uint64_t>(data, "minBlockHeight");
     cfg.maxBlockHeight = load<uint64_t>(data, "maxBlockHeight");
     cfg.startShowAtBlockHeight = load<uint64_t>(data, "startShowAtBlockHeight");
+    cfg.skipBlocks = load<uint64_t>(data, "skipBlocks");
     cfg.connectionIpAddr = std::string(load<std::string_view>(data, "connectionIpAddr"));
     cfg.connectionSocket = load<uint64_t>(data, "connectionSocket");
     cfg.colorUpperValueLimit = load<uint64_t>(data, "colorUpperValueLimit");
     cfg.colorMap = std::string(load<std::string_view>(data, "colorMap"));
-    cfg.colorHighlightRGB = load<std::array<uint8_t, 3>>(data, "colorHighlightRGB");
-    cfg.colorBackgroundRGB = load<std::array<uint8_t, 3>>(data, "colorBackgroundRGB");
+    cfg.colorHighlightRGB = loadArray<uint8_t, 3>(data, "colorHighlightRGB");
+    cfg.colorBackgroundRGB = loadArray<uint8_t, 3>(data, "colorBackgroundRGB");
     return cfg;
 }
 

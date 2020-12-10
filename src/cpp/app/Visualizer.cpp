@@ -65,7 +65,8 @@ TEST_CASE("visualizer" * doctest::skip()) {
         }
 
         auto hudInfo = buv::HudBlockInfo();
-        hudInfo.blockHeader = &allBlockHeaders[cib.blockHeight()];
+        hudInfo.blockHeaders = allBlockHeaders.data();
+        hudInfo.blockHeight = cib.blockHeight();
 
         density.end_block(cib.blockHeight(), [&](uint8_t const* data) {
             hud->draw(data, hudInfo);

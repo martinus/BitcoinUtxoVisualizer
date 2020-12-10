@@ -6,15 +6,21 @@
 
     "imageWidth": 3840,
     "imageHeight": 2160,
+
+    "graphRect": [0, 10, 3720, 2090],
+
     "minSatoshi": 1,
     "maxSatoshi": 1000000000000,
     "minBlockHeight": 0,
     "maxBlockHeight": 660350,
-    "startShowAtBlockHeight": 130000,
+    
+    "skipBlocks": 117,
+
+    "startShowAtBlockHeight": 300000,
     "connectionIpAddr": "127.0.0.1",
     "connectionSocket": 12987,
     "colorMap": "turbo",
-    "colorUpperValueLimit": 600,
+    "colorUpperValueLimit": 500,
     "colorHighlightRGB": [
         255,
         255,

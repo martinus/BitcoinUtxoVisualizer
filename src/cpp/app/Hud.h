@@ -8,7 +8,8 @@
 namespace buv {
 
 struct HudBlockInfo {
-    BlockHeader* blockHeader{};
+    BlockHeader const* blockHeaders{};
+    uint32_t blockHeight{};
 };
 
 // head up display

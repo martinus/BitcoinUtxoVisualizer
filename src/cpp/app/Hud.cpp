@@ -98,19 +98,14 @@ public:
         , mMat(cfg.imageHeight, cfg.imageWidth, CV_8UC3)
         , mSatoshiBlockheightToPixel(cfg) {}
 
-    void writeAmount(size_t x, size_t y, char const* number, char const* denom) {
+    void writeAmount(size_t x,
+                     size_t y,
+                     char const* number,
+                     char const* denom,
+                     Origin originNumber = Origin::center_right,
+                     Origin originDenom = Origin::center_left) {
         auto mid = 60;
         auto offset = 3;
-        auto originNumber = Origin::center_right;
-        auto originDenom = Origin::center_left;
-        if (y == 0) {
-            originNumber = Origin::top_right;
-            originDenom = Origin::top_left;
-        } else if (y >= mCfg.imageHeight - 1) {
-            originNumber = Origin::bottom_right;
-            originDenom = Origin::bottom_left;
-        }
-
         write(mMat, x + mid - offset, y, originNumber, number);
         write(mMat, x + mid, y, originDenom, denom);
     }
@@ -118,16 +113,26 @@ public:
     // Copies rgbSource, then draws dat based on the given info.
     void draw(uint8_t const* rgbSource, HudBlockInfo const& info) override {
         std::memcpy(mMat.ptr(), rgbSource, mMat.total() * mMat.elemSize());
-        auto formattedTime = date::format("%F %T %Z", std::chrono::floor<std::chrono::seconds>(info.blockHeader->time));
+
+#if 0
+        mMat = cv::Scalar(70, 0, 20);
+        cv::rectangle(
+            mMat, cv::Rect(mCfg.graphRect.x, mCfg.graphRect.y, mCfg.graphRect.w, mCfg.graphRect.h), cv::Scalar(0, 155, 20));
+#endif
+
+        auto const& blockHeader = info.blockHeaders[info.blockHeight];
+        auto formattedTime = date::format("%F %T %Z", std::chrono::floor<std::chrono::seconds>(blockHeader.time));
 
         write(mMat, 700, 0, Origin::top_right, "{} time", formattedTime);
-        write(mMat, 700, 20, Origin::top_right, "{:5} height", info.blockHeader->height);
-        write(mMat, 700, 40, Origin::top_right, "{} hash", util::toHex(info.blockHeader->hash));
-        write(mMat, 700, 60, Origin::top_right, "{} difficulty", info.blockHeader->difficulty);
-        write(mMat, 700, 80, Origin::top_right, "{} number of transactions", info.blockHeader->nTx);
+        write(mMat, 700, 20, Origin::top_right, "{:5} height", blockHeader.height);
+        write(mMat, 700, 40, Origin::top_right, "{} hash", util::toHex(blockHeader.hash));
+        write(mMat, 700, 60, Origin::top_right, "{} difficulty", blockHeader.difficulty);
+        write(mMat, 700, 80, Origin::top_right, "{} number of transactions", blockHeader.nTx);
 
+        // draw satoshi lines
+        auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(blockHeader.height);
+        // auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(mCfg.maxBlockHeight);
         auto oneBtc = int64_t(100'000'000);
-        auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(info.blockHeader->height);
         for (int64_t mult = 1; mult <= oneBtc * 10000; mult *= 10) {
             for (int64_t digit = 1; digit < 10; ++digit) {
                 auto y = mSatoshiBlockheightToPixel.satoshiToPixelHeight(digit * mult);
@@ -140,8 +145,33 @@ public:
             }
         }
 
+        // draw block lines
+        auto offset = mCfg.graphRect.h + mCfg.graphRect.y + 4;
+        for (uint32_t h = 0; h < mCfg.maxBlockHeight; h += 10000) {
+            auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(h);
+            auto len = 5;
+            bool showText = false;
+            if (h % 100000 == 0) {
+                len *= 2;
+                showText = true;
+            }
+            cv::line(mMat, cv::Point(legendX, offset), cv::Point(legendX, offset + len), cv::Scalar(255, 255, 255));
+
+            // only print text when distance to current line is large enough, so it's not overwritten
+            if (showText && std::abs(static_cast<int>(x) - static_cast<int>(legendX)) > 55) {
+                write(mMat, legendX, offset + len + 8, h == 0 ? Origin::top_left : Origin::top_center, "{}k", h / 1000);
+            }
+        }
+        write(mMat, x, offset + 10 + 8, Origin::top_center, "{}", blockHeader.height);
+        write(mMat, x, offset + 30 + 8, Origin::top_center, "{}", formattedTime);
+
         // draw the legend
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10000 * oneBtc), "10", "kBTC");
+        writeAmount(x,
+                    mSatoshiBlockheightToPixel.satoshiToPixelHeight(10000 * oneBtc),
+                    "10",
+                    "kBTC",
+                    Origin::top_right,
+                    Origin::top_left);
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1000 * oneBtc), "1", "kBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(100 * oneBtc), "100", "BTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10 * oneBtc), "10", "BTC");
@@ -152,8 +182,8 @@ public:
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10000), "100", "uBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1000), "10", "uBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(100), "1", "uBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10), "10", "Satoshi");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1), "1", "Satoshi");
+        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10), "10", "sat");
+        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1), "1", "sat", Origin::bottom_right, Origin::bottom_left);
     }
 
     // Returns the drawn RGB data.

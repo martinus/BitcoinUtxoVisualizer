@@ -5,6 +5,13 @@
 #include <string>
 
 namespace buv {
+template <typename T>
+struct Rect {
+    T x{};
+    T y{};
+    T w{};
+    T h{};
+};
 
 struct Cfg {
     std::string bitcoinRpcUrl{};
@@ -13,12 +20,15 @@ struct Cfg {
     std::string blkFile{};
     size_t imageWidth{};
     size_t imageHeight{};
+
+    Rect<size_t> graphRect{};
     int64_t minSatoshi{};
     int64_t maxSatoshi{};
     uint32_t minBlockHeight{};
     uint32_t maxBlockHeight{};
 
     uint32_t startShowAtBlockHeight{};
+    uint32_t skipBlocks{1};
     std::string connectionIpAddr = "127.0.0.1";
     uint16_t connectionSocket = 12987;
     std::string colorMap = "viridis";
