@@ -95,7 +95,7 @@ class HudImpl : public Hud {
 public:
     explicit HudImpl(Cfg const& cfg)
         : mCfg(cfg)
-        , mMat(cfg.pixelHeight, cfg.pixelWidth, CV_8UC3)
+        , mMat(cfg.imageHeight, cfg.imageWidth, CV_8UC3)
         , mSatoshiBlockheightToPixel(cfg) {}
 
     void writeAmount(size_t x, size_t y, char const* number, char const* denom) {
@@ -106,7 +106,7 @@ public:
         if (y == 0) {
             originNumber = Origin::top_right;
             originDenom = Origin::top_left;
-        } else if (y >= mCfg.pixelHeight - 1) {
+        } else if (y >= mCfg.imageHeight - 1) {
             originNumber = Origin::bottom_right;
             originDenom = Origin::bottom_left;
         }

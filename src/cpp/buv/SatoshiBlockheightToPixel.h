@@ -19,13 +19,13 @@ public:
         : mFnSatoshi(std::log(static_cast<double>(cfg.maxSatoshi)),
                      0.0,
                      std::log(static_cast<double>(cfg.minSatoshi)),
-                     static_cast<double>(cfg.pixelHeight))
+                     static_cast<double>(cfg.imageHeight))
         , mFnBlock(static_cast<double>(cfg.minBlockHeight),
                    0,
                    static_cast<double>(cfg.maxBlockHeight),
-                   static_cast<double>(cfg.pixelWidth))
-        , mHeight(cfg.pixelHeight)
-        , mWidth(cfg.pixelWidth) {}
+                   static_cast<double>(cfg.imageWidth))
+        , mHeight(cfg.imageHeight)
+        , mWidth(cfg.imageWidth) {}
 
     [[nodiscard]] inline auto satoshiToPixelHeight(int64_t satoshi) const -> size_t {
         auto const famount = satoshi >= 0 ? satoshi : -satoshi;

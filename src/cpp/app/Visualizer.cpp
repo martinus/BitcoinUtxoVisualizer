@@ -81,7 +81,7 @@ TEST_CASE("visualizer" * doctest::skip()) {
             case 's': {
                 auto imgFileName = fmt::format("img_{:07}.ppm", cib.blockHeight());
                 LOG("Writing image '{}'", imgFileName);
-                saveImagePPM(cfg.pixelWidth, cfg.pixelHeight, hud->data(), imgFileName);
+                saveImagePPM(cfg.imageWidth, cfg.imageHeight, hud->data(), imgFileName);
             }
             }
         }

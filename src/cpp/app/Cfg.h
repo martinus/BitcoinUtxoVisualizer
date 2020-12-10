@@ -11,8 +11,8 @@ struct Cfg {
     std::string blockHeadersFile{};
 
     std::string blkFile{};
-    size_t pixelWidth{};
-    size_t pixelHeight{};
+    size_t imageWidth{};
+    size_t imageHeight{};
     int64_t minSatoshi{};
     int64_t maxSatoshi{};
     uint32_t minBlockHeight{};

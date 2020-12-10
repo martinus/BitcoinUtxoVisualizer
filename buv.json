@@ -4,8 +4,8 @@
     "blkFile": "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1",
     "blockHeadersFile": "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/blockHeaders.bin",
 
-    "pixelWidth": 3840,
-    "pixelHeight": 2160,
+    "imageWidth": 3840,
+    "imageHeight": 2160,
     "minSatoshi": 1,
     "maxSatoshi": 1000000000000,
     "minBlockHeight": 0,

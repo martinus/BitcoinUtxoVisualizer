@@ -23,12 +23,12 @@ public:
     explicit Density(Cfg const& cfg)
         : mCfg(cfg)
         , mSatoshiBlockheightToPixel(cfg)
-        , m_data(cfg.pixelWidth * cfg.pixelHeight, 0)
+        , m_data(cfg.imageWidth * cfg.imageHeight, 0)
         , m_last_data(nullptr)
-        , m_pixel_set_with_history(cfg.pixelWidth * cfg.pixelHeight, 50)
-        , m_current_block_pixels(cfg.pixelWidth * cfg.pixelHeight)
+        , m_pixel_set_with_history(cfg.imageWidth * cfg.imageHeight, 50)
+        , m_current_block_pixels(cfg.imageWidth * cfg.imageHeight)
         , m_density_to_image(
-              cfg.pixelWidth, cfg.pixelHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMap), cfg.colorBackgroundRGB)
+              cfg.imageWidth, cfg.imageHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMap), cfg.colorBackgroundRGB)
         , m_current_block_height(0)
         , m_prev_block_height(-1)
         , m_prev_amount(-1) {}
@@ -49,7 +49,7 @@ public:
         auto const pixel_x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(block_height);
         auto const pixel_y = mSatoshiBlockheightToPixel.satoshiToPixelHeight(amount);
 
-        auto pixel_idx = pixel_y * mCfg.pixelWidth + pixel_x;
+        auto pixel_idx = pixel_y * mCfg.imageWidth + pixel_x;
         static size_t max_pixel_idx = 0;
         if (pixel_idx > max_pixel_idx) {
             max_pixel_idx = pixel_idx;
@@ -81,38 +81,38 @@ public:
         }
 
         for (auto const pixel_idx : m_current_block_pixels) {
-            size_t const y = pixel_idx / mCfg.pixelWidth;
-            size_t const x = pixel_idx - y * mCfg.pixelWidth;
+            size_t const y = pixel_idx / mCfg.imageWidth;
+            size_t const x = pixel_idx - y * mCfg.imageWidth;
 
             if (m_current_block_height >= 15) {
                 // upper row
                 if (x > 0) {
                     if (y > 0) {
-                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * mCfg.pixelWidth + (x - 1));
+                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * mCfg.imageWidth + (x - 1));
                     }
-                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * mCfg.pixelWidth + (x - 1));
-                    if (y + 1 < mCfg.pixelHeight) {
-                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * mCfg.pixelWidth + (x - 1));
+                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * mCfg.imageWidth + (x - 1));
+                    if (y + 1 < mCfg.imageHeight) {
+                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * mCfg.imageWidth + (x - 1));
                     }
                 }
 
                 // middle row
                 if (y > 0) {
-                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y - 1) * mCfg.pixelWidth + (x + 0));
+                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y - 1) * mCfg.imageWidth + (x + 0));
                 }
                 m_pixel_set_with_history.insert(m_current_block_height, pixel_idx);
-                if (y + 1 < mCfg.pixelHeight) {
-                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 1) * mCfg.pixelWidth + (x + 0));
+                if (y + 1 < mCfg.imageHeight) {
+                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 1) * mCfg.imageWidth + (x + 0));
                 }
 
                 // lower row
-                if (x + 1 < mCfg.pixelWidth) {
+                if (x + 1 < mCfg.imageWidth) {
                     if (y > 0) {
-                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * mCfg.pixelWidth + (x + 1));
+                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y - 1) * mCfg.imageWidth + (x + 1));
                     }
-                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * mCfg.pixelWidth + (x + 1));
-                    if (y + 1 < mCfg.pixelHeight) {
-                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * mCfg.pixelWidth + (x + 1));
+                    m_pixel_set_with_history.insert(m_current_block_height - 7, (y + 0) * mCfg.imageWidth + (x + 1));
+                    if (y + 1 < mCfg.imageHeight) {
+                        m_pixel_set_with_history.insert(m_current_block_height - 15, (y + 1) * mCfg.imageWidth + (x + 1));
                     }
                 }
             }
@@ -159,7 +159,7 @@ public:
     void save_image_ppm(std::string const& filename) const {
         // see http://netpbm.sourceforge.net/doc/ppm.html
         std::ofstream fout(filename, std::ios::binary);
-        fout << "P6\n" << mCfg.pixelWidth << " " << mCfg.pixelHeight << "\n" << 255 << "\n" << m_density_to_image;
+        fout << "P6\n" << mCfg.imageWidth << " " << mCfg.imageHeight << "\n" << 255 << "\n" << m_density_to_image;
     }
 
     ~Density() {
