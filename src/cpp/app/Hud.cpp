@@ -1,6 +1,8 @@
 #include "Hud.h"
+#include "util/hex.h"
 
 #include <buv/SatoshiBlockheightToPixel.h>
+#include <util/date.h>
 #include <util/log.h>
 
 #include <fmt/format.h>
@@ -116,12 +118,17 @@ public:
     // Copies rgbSource, then draws dat based on the given info.
     void draw(uint8_t const* rgbSource, HudBlockInfo const& info) override {
         std::memcpy(mMat.ptr(), rgbSource, mMat.total() * mMat.elemSize());
-        write(mMat, 300, 0, Origin::top_right, "{:5} Block height", info.blockHeight);
-        write(mMat, 300, 20, Origin::top_right, "{:5} whatever", info.blockHeight * 123);
+        auto formattedTime = date::format("%F %T %Z", std::chrono::floor<std::chrono::seconds>(info.blockHeader->time));
+
+        write(mMat, 700, 0, Origin::top_right, "{} time", formattedTime);
+        write(mMat, 700, 20, Origin::top_right, "{:5} height", info.blockHeader->height);
+        write(mMat, 700, 40, Origin::top_right, "{} hash", util::toHex(info.blockHeader->hash));
+        write(mMat, 700, 60, Origin::top_right, "{} difficulty", info.blockHeader->difficulty);
+        write(mMat, 700, 80, Origin::top_right, "{} number of transactions", info.blockHeader->nTx);
 
         // draw the legend
         auto oneBtc = int64_t(100'000'000);
-        auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(info.blockHeight);
+        auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(info.blockHeader->height);
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10000 * oneBtc), "10", "kBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(5000 * oneBtc), "5", "kBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1000 * oneBtc), "1", "kBTC");

@@ -1,3 +1,4 @@
+#include <app/BlockHeader.h>
 #include <app/Cfg.h>
 #include <app/Hud.h>
 #include <app/forEachChange.h>
@@ -42,10 +43,15 @@ TEST_CASE("visualizer" * doctest::skip()) {
     auto density = buv::Density(cfg);
     auto throttler = util::ThrottlePeriodic(1000ms);
 
+    LOG("mmapping '{}', this could take a while...", cfg.blkFile);
     auto file = util::Mmap(cfg.blkFile);
     auto numBlocks = buv::numBlocks(file);
     LOG("{} blocks, overwritting cfg with that setting", numBlocks);
     cfg.maxBlockHeight = numBlocks - 1;
+
+    LOG("loading '{}'", cfg.blockHeadersFile);
+    auto allBlockHeaders = buv::BlockHeader::load(cfg.blockHeadersFile);
+    LOG("{} blocks in blocksHeadersFile", allBlockHeaders.size());
 
     auto hud = buv::Hud::create(cfg);
     auto socketStream = buv::SocketStream::create(cfg.connectionIpAddr.c_str(), cfg.connectionSocket);
@@ -59,7 +65,7 @@ TEST_CASE("visualizer" * doctest::skip()) {
         }
 
         auto hudInfo = buv::HudBlockInfo();
-        hudInfo.blockHeight = cib.blockHeight();
+        hudInfo.blockHeader = &allBlockHeaders[cib.blockHeight()];
 
         density.end_block(cib.blockHeight(), [&](uint8_t const* data) {
             hud->draw(data, hudInfo);

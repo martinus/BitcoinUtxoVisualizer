@@ -1,5 +1,6 @@
 #pragma once
 
+#include <app/BlockHeader.h>
 #include <app/Cfg.h>
 
 #include <memory>
@@ -7,7 +8,7 @@
 namespace buv {
 
 struct HudBlockInfo {
-    uint32_t blockHeight{};
+    BlockHeader* blockHeader{};
 };
 
 // head up display

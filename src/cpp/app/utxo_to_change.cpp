@@ -1,8 +1,10 @@
 #include <app/BlockEncoder.h>
 #include <app/BlockHeader.h>
+#include <app/Cfg.h>
 #include <app/Utxo.h>
 #include <util/HttpClient.h>
 #include <util/Throttle.h>
+#include <util/args.h>
 #include <util/hex.h>
 #include <util/kbhit.h>
 #include <util/log.h>
@@ -77,29 +79,25 @@ struct ResourceData {
 } // namespace
 
 TEST_CASE("utxo_to_change" * doctest::skip()) {
-    static constexpr auto bitcoinRpcUrl = "http://127.0.0.1:8332";
-    static constexpr auto dataDir = "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer";
+    auto cfg = buv::parseCfg(util::args::get("-cfg").value());
 
-    // block 645693
-    // static constexpr auto startBlock = "0000000000000000000e5c22c24fd31a29d8ecb2c2cec80d3a9cb75b7aa54f18";
-
-    std::filesystem::create_directories(dataDir);
-
-    fmt::print("created {}, accessing bitcoin at {}\n", dataDir, bitcoinRpcUrl);
-    auto cli = util::HttpClient::create(bitcoinRpcUrl);
+    auto cli = util::HttpClient::create(cfg.bitcoinRpcUrl.c_str());
     auto jsonParser = simdjson::dom::parser();
 
     auto allBlockHeaders = buv::BlockHeader::fetch(cli);
+    LOG("got {} blocks", allBlockHeaders.size());
+    buv::BlockHeader::write(allBlockHeaders, cfg.blockHeadersFile);
+    LOG("wrote blockheaders into '{}'", cfg.blockHeadersFile);
 
     auto throttler = util::ThrottlePeriodic(1s);
     // auto utxoDumpThrottler = util::LogThrottler(20s);
 
-    auto fout = std::ofstream(std::filesystem::path(dataDir) / "changes.blk1", std::ios::binary | std::ios::out);
+    auto fout = std::ofstream(cfg.blkFile, std::ios::binary | std::ios::out);
     auto utxo = std::make_unique<buv::Utxo>();
 
     auto resources = std::vector<ResourceData>(std::thread::hardware_concurrency() * 2);
     for (auto& resource : resources) {
-        resource.cli = util::HttpClient::create(bitcoinRpcUrl);
+        resource.cli = util::HttpClient::create(cfg.bitcoinRpcUrl.c_str());
     }
 
     util::parallelToSequential(

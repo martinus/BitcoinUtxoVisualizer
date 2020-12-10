@@ -10,11 +10,11 @@
     "maxSatoshi": 1000000000000,
     "minBlockHeight": 0,
     "maxBlockHeight": 660350,
-    "startShowAtBlockHeight": 200000,
+    "startShowAtBlockHeight": 650000,
     "connectionIpAddr": "127.0.0.1",
     "connectionSocket": 12987,
     "colorMap": "viridis",
-    "colorUpperValueLimit": 213,
+    "colorUpperValueLimit": 250,
     "colorHighlightRGB": [
         255,
         255,
