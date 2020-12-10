@@ -99,7 +99,7 @@ public:
         , mSatoshiBlockheightToPixel(cfg) {}
 
     void writeAmount(size_t x, size_t y, char const* number, char const* denom) {
-        auto mid = 50;
+        auto mid = 60;
         auto offset = 3;
         auto originNumber = Origin::center_right;
         auto originDenom = Origin::center_left;
@@ -126,33 +126,33 @@ public:
         write(mMat, 700, 60, Origin::top_right, "{} difficulty", info.blockHeader->difficulty);
         write(mMat, 700, 80, Origin::top_right, "{} number of transactions", info.blockHeader->nTx);
 
-        // draw the legend
         auto oneBtc = int64_t(100'000'000);
         auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(info.blockHeader->height);
+        for (int64_t mult = 1; mult <= oneBtc * 10000; mult *= 10) {
+            for (int64_t digit = 1; digit < 10; ++digit) {
+                auto y = mSatoshiBlockheightToPixel.satoshiToPixelHeight(digit * mult);
+                auto offset = 4;
+                auto len = 5;
+                if (digit == 1) {
+                    len *= 2;
+                }
+                cv::line(mMat, cv::Point(x + offset, y), cv::Point(x + offset + len, y), cv::Scalar(255, 255, 255));
+            }
+        }
+
+        // draw the legend
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10000 * oneBtc), "10", "kBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(5000 * oneBtc), "5", "kBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1000 * oneBtc), "1", "kBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(500 * oneBtc), "500", "BTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(100 * oneBtc), "100", "BTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(50 * oneBtc), "50", "BTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10 * oneBtc), "10", "BTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(5 * oneBtc), "5", "BTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(oneBtc), "1", "BTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(50000000), "500", "mBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10000000), "100", "mBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(5000000), "50", "mBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1000000), "10", "mBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(500000), "5", "mBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(100000), "1", "mBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(50000), "500", "uBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10000), "100", "uBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(5000), "50", "uBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1000), "10", "uBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(500), "5", "uBTC");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(100), "1", "uBTC");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(50), "50", "Satoshi");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(10), "10", "Satoshi");
-        writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(5), "5", "Satoshi");
         writeAmount(x, mSatoshiBlockheightToPixel.satoshiToPixelHeight(1), "1", "Satoshi");
     }
 
