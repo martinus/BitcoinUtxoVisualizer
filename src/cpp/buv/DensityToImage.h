@@ -1,7 +1,9 @@
 #pragma once
 
 #include <buv/ColorMap.h>
+#include <buv/LinearFunction.h>
 #include <buv/truncate.h>
+#include <util/log.h>
 
 #include <array>
 #include <cmath>
@@ -15,6 +17,16 @@ namespace buv {
 // maps density data to image data. It does so continously, so we don't have to iterate
 // the whole density map each time we want to extract the image.
 class DensityToImage {
+    // density 1 should map to 0, NEVER below 0.
+    [[nodiscard]] auto scaleDensityToColor(size_t density) const -> double {
+        // log scales not so well, because for small numbers it has huge color jumps
+        // return std::log(density);
+        // return std::tanh(2.0 * (static_cast<double>(density) - 1.0) / m_max_included_value);
+        // return std::pow(density, 1 / 3.0);
+
+        return std::log(density + 30);
+    }
+
 public:
     // initialize with background color
     // calculates the factor so that max_value is the last integer value that mapps to 255.
@@ -22,7 +34,7 @@ public:
         size_t width, size_t height, size_t max_included_value, ColorMap colormap, std::array<uint8_t, 3> colorBackground)
         : m_colormap(std::move(colormap))
         , m_rgb(3 * width * height, 0)
-        , m_fact(256.0 / std::log(max_included_value + 1))
+        , mDensityScaler(scaleDensityToColor(1), 0, scaleDensityToColor(max_included_value), 255)
         , m_max_included_value(max_included_value)
         , mWidth(width)
         , mHeight(height)
@@ -42,9 +54,9 @@ public:
         } else if (density >= m_max_included_value) {
             rgb_source = m_colormap.rgb(255);
         } else {
-            auto log = std::log(density) * m_fact;
-            auto log_int = static_cast<int>(log);
-            rgb_source = m_colormap.rgb(log_int);
+            auto val = mDensityScaler(scaleDensityToColor(density));
+            auto colIdx = truncate<int>(0, val, 255);
+            rgb_source = m_colormap.rgb(colIdx);
         }
         rgb(pixel_idx, rgb_source);
     }
@@ -81,7 +93,7 @@ private:
 
     ColorMap const m_colormap;
     std::vector<uint8_t> m_rgb;
-    double const m_fact;
+    LinearFunction mDensityScaler;
     size_t const m_max_included_value;
     size_t mWidth{};
     size_t mHeight{};
