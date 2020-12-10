@@ -79,6 +79,74 @@ void write(cv::Mat& mat, size_t x, size_t y, Origin origin, char const* format, 
     cv::putText(mat, text, pos, fontFace, fontScale, color, thickness, cv::LINE_AA);
 }
 
+template <typename... Args>
+void writeMono(cv::Mat& mat, size_t x, size_t y, Origin origin, char const* format, Args&&... args) {
+    auto color = cv::Scalar(255, 255, 255);
+    auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
+    auto fontScale = 0.6;
+    auto thickness = 1;
+
+    auto text = fmt::format(format, std::forward<Args>(args)...);
+    auto pos = cv::Point(x, y);
+
+    auto baseline = int();
+
+    // gets spacing for digit '0' and uses this for the spacing.
+    auto letterSize = cv::getTextSize("0", fontFace, fontScale, thickness, &baseline);
+    auto size = letterSize;
+    size.width *= text.size();
+
+    // ignores baseline, so we get consistent alignment regardless of the letters used. I think. Untested.
+
+    switch (origin) {
+    case Origin::top_left:
+        pos.y += size.height;
+        break;
+    case Origin::top_center:
+        pos.x -= size.width / 2;
+        pos.y += size.height;
+        break;
+    case Origin::top_right:
+        pos.x -= size.width;
+        pos.y += size.height;
+        break;
+
+    case Origin::center_left:
+        pos.y += size.height / 2;
+        break;
+    case Origin::center:
+        pos.x -= size.width / 2;
+        pos.y += size.height / 2;
+        break;
+    case Origin::center_right:
+        pos.x -= size.width;
+        pos.y += size.height / 2;
+        break;
+
+    case Origin::bottom_left:
+        // nothing to do, that's the default
+        break;
+    case Origin::bottom_center:
+        pos.x -= size.width / 2;
+        break;
+    case Origin::bottom_right:
+        pos.x -= size.width;
+        break;
+    }
+
+    for (auto ch : text) {
+        auto zeroTerminatedString = std::array<char, 2>();
+        zeroTerminatedString[0] = ch;
+        // center this letter
+        auto thisLetterSize = cv::getTextSize(zeroTerminatedString.data(), fontFace, fontScale, thickness, &baseline);
+
+        auto thisPos = pos;
+        thisPos.x += (letterSize.width - thisLetterSize.width) / 2;
+        cv::putText(mat, zeroTerminatedString.data(), thisPos, fontFace, fontScale, color, thickness, cv::LINE_AA);
+        pos.x += letterSize.width;
+    }
+}
+
 } // namespace
 
 namespace buv {
@@ -110,6 +178,70 @@ public:
         write(mMat, x + mid, y, originDenom, denom);
     }
 
+    // prints current block info
+    void writeBlockInfo(buv::HudBlockInfo const& info) {
+        auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(info.blockHeight);
+        auto const& blockHeader = info.blockHeaders[info.blockHeight];
+
+        auto column1x = mCfg.imageWidth - 1100;
+        if (legendX + 150 > column1x) {
+            column1x = 20;
+        }
+
+        auto column2x = column1x + 240;
+
+        auto y = 10;
+        auto lineSpacing = 30;
+
+        // see e.g.
+        // https://blockstream.info/block/0000000000000000000419b60c3f5d98fc6f541896b399cb14076220a718bc25?expand
+        // https://www.blockchain.com/btc/block/548847
+
+        write(mMat, column1x, y, Origin::top_left, "Hash");
+        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.hash).c_str());
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Timestamp");
+        write(mMat,
+              column2x,
+              y,
+              Origin::top_left,
+              date::format("%F %T %Z", std::chrono::floor<std::chrono::seconds>(blockHeader.time)).c_str());
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Height");
+        write(mMat, column2x, y, Origin::top_left, "{}", blockHeader.height);
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Number of Transactions");
+        write(mMat, column2x, y, Origin::top_left, "{}", blockHeader.nTx);
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Difficulty");
+        write(mMat, column2x, y, Origin::top_left, "{}", blockHeader.difficulty);
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Merkle root");
+        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.merkleroot).c_str());
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "chainwork");
+        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.chainwork).c_str());
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Version");
+        writeMono(mMat, column2x, y, Origin::top_left, "0x{:x}", blockHeader.version);
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Bits");
+        writeMono(mMat, column2x, y, Origin::top_left, "0x{}", util::toHex(blockHeader.bits));
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Nonce");
+        writeMono(mMat, column2x, y, Origin::top_left, "0x{:x}", blockHeader.nonce);
+        y += lineSpacing;
+    }
+
     // Copies rgbSource, then draws dat based on the given info.
     void draw(uint8_t const* rgbSource, HudBlockInfo const& info) override {
         std::memcpy(mMat.ptr(), rgbSource, mMat.total() * mMat.elemSize());
@@ -119,15 +251,10 @@ public:
         cv::rectangle(
             mMat, cv::Rect(mCfg.graphRect.x, mCfg.graphRect.y, mCfg.graphRect.w, mCfg.graphRect.h), cv::Scalar(0, 155, 20));
 #endif
+        writeBlockInfo(info);
 
         auto const& blockHeader = info.blockHeaders[info.blockHeight];
-        auto formattedTime = date::format("%F %T %Z", std::chrono::floor<std::chrono::seconds>(blockHeader.time));
-
-        write(mMat, 700, 0, Origin::top_right, "{} time", formattedTime);
-        write(mMat, 700, 20, Origin::top_right, "{:5} height", blockHeader.height);
-        write(mMat, 700, 40, Origin::top_right, "{} hash", util::toHex(blockHeader.hash));
-        write(mMat, 700, 60, Origin::top_right, "{} difficulty", blockHeader.difficulty);
-        write(mMat, 700, 80, Origin::top_right, "{} number of transactions", blockHeader.nTx);
+        auto formattedTime = date::format("%F %T", std::chrono::floor<std::chrono::seconds>(blockHeader.time));
 
         // draw satoshi lines
         auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(blockHeader.height);
@@ -158,12 +285,17 @@ public:
             cv::line(mMat, cv::Point(legendX, offset), cv::Point(legendX, offset + len), cv::Scalar(255, 255, 255));
 
             // only print text when distance to current line is large enough, so it's not overwritten
-            if (showText && std::abs(static_cast<int>(x) - static_cast<int>(legendX)) > 55) {
+            auto distFromMid = std::abs(static_cast<int>(x) - static_cast<int>(legendX));
+            if (showText && distFromMid > 60) {
                 write(mMat, legendX, offset + len + 8, h == 0 ? Origin::top_left : Origin::top_center, "{}k", h / 1000);
+            }
+            if (showText && distFromMid > 190) {
+                auto formattedTime = date::format("%F", std::chrono::floor<std::chrono::seconds>(info.blockHeaders[h].time));                
+                write(mMat, legendX, offset + len + 30 + 8, h == 0 ? Origin::top_left : Origin::top_center, formattedTime.c_str());
             }
         }
         write(mMat, x, offset + 10 + 8, Origin::top_center, "{}", blockHeader.height);
-        write(mMat, x, offset + 30 + 8, Origin::top_center, "{}", formattedTime);
+        write(mMat, x, offset + 40 + 8, Origin::top_center, "{}", formattedTime);
 
         // draw the legend
         writeAmount(x,
