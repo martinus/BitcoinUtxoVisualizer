@@ -287,15 +287,19 @@ public:
             // only print text when distance to current line is large enough, so it's not overwritten
             auto distFromMid = std::abs(static_cast<int>(x) - static_cast<int>(legendX));
             if (showText && distFromMid > 60) {
-                write(mMat, legendX, offset + len + 8, h == 0 ? Origin::top_left : Origin::top_center, "{}k", h / 1000);
+                write(mMat, legendX, offset + len + 17, h == 0 ? Origin::top_left : Origin::top_center, "{}k", h / 1000);
             }
             if (showText && distFromMid > 190) {
-                auto formattedTime = date::format("%F", std::chrono::floor<std::chrono::seconds>(info.blockHeaders[h].time));                
-                write(mMat, legendX, offset + len + 30 + 8, h == 0 ? Origin::top_left : Origin::top_center, formattedTime.c_str());
+                auto formattedTime = date::format("%F", std::chrono::floor<std::chrono::seconds>(info.blockHeaders[h].time));
+                write(
+                    mMat, legendX, offset + len + 30 + 17, h == 0 ? Origin::top_left : Origin::top_center, formattedTime.c_str());
             }
         }
-        write(mMat, x, offset + 10 + 8, Origin::top_center, "{}", blockHeader.height);
-        write(mMat, x, offset + 40 + 8, Origin::top_center, "{}", formattedTime);
+
+        // draw current block marker
+        cv::line(mMat, cv::Point(x, offset), cv::Point(x, offset + 15), cv::Scalar(255, 255, 255));
+        write(mMat, x, offset + 10 + 17, Origin::top_center, "{}", blockHeader.height);
+        write(mMat, x, offset + 40 + 17, Origin::top_center, "{}", formattedTime);
 
         // draw the legend
         writeAmount(x,

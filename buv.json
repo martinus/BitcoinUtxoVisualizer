@@ -7,7 +7,7 @@
     "imageWidth": 3840,
     "imageHeight": 2160,
 
-    "graphRect": [0, 10, 3720, 2080],
+    "graphRect": [0, 10, 3720, 2072],
 
     "minSatoshi": 1,
     "maxSatoshi": 1000000000000,
@@ -16,7 +16,7 @@
     
     "skipBlocks": 0,
 
-    "startShowAtBlockHeight": 0,
+    "startShowAtBlockHeight": 100000,
     "connectionIpAddr": "127.0.0.1",
     "connectionSocket": 12987,
     "colorMap": "turbo",
