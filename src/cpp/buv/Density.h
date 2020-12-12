@@ -44,15 +44,18 @@ public:
         if (amount == 0) {
             return;
         }
-        if (amount == m_prev_amount && block_height == m_prev_block_height) {
-            *m_last_data += amount >= 0 ? 1 : -1;
-            return;
+        if (amount == m_prev_amount) {
+            if (block_height == m_prev_block_height) {
+                *m_last_data += amount >= 0 ? 1 : -1;
+                return;
+            }
+        } else {
+            // relatively slow due to std::log
+            mPixelY = mSatoshiBlockheightToPixel.satoshiToPixelHeight(amount);
         }
+        mPixelX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(block_height);
 
-        auto const pixel_x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(block_height);
-        auto const pixel_y = mSatoshiBlockheightToPixel.satoshiToPixelHeight(amount);
-
-        auto pixel_idx = pixel_y * mCfg.imageWidth + pixel_x;
+        auto pixel_idx = mPixelY * mCfg.imageWidth + mPixelX;
         static size_t max_pixel_idx = 0;
         if (pixel_idx > max_pixel_idx) {
             max_pixel_idx = pixel_idx;
@@ -190,6 +193,8 @@ private:
     SatoshiBlockheightToPixel mSatoshiBlockheightToPixel;
     std::vector<size_t> m_data;
     size_t* m_last_data;
+    size_t mPixelX{};
+    size_t mPixelY{};
     PixelSetWithHistory m_pixel_set_with_history;
     PixelSet m_current_block_pixels;
     DensityToImage m_density_to_image;

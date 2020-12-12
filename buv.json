@@ -13,7 +13,7 @@
     "maxSatoshi": 1000000000000,
     
     "skipBlocks": 0,
-    "repeatLastBlockTimes": 3600,
+    "repeatLastBlockTimes": 1200,
 
     "startShowAtBlockHeight": 0,
     "connectionIpAddr": "127.0.0.1",
