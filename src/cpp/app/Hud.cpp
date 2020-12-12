@@ -176,21 +176,25 @@ public:
         }
 
         auto const* ptr = mmappedFile.begin();
-        auto const* end = mmappedFile.end();
 
         auto blockHeight = uint32_t();
         auto nextTargetBlockHeight = uint32_t();
-        while (ptr != end) {
+        while (blockHeight <= mCfg.maxBlockHeight) {
             if (blockHeight == nextTargetBlockHeight) {
                 auto [cib, newPtr] = buv::ChangesInBlock::decode(ptr);
                 nextTargetBlockHeight += 100000;
+                if (nextTargetBlockHeight > mCfg.maxBlockHeight) {
+                    nextTargetBlockHeight = mCfg.maxBlockHeight;
+                }
                 ptr = newPtr;
                 auto formattedTime = date::format("%F", UnixClockSeconds(std::chrono::seconds(cib.blockData().time)));
                 mHeightToTimestring[cib.blockData().blockHeight] = formattedTime;
             } else {
-                std::tie(blockHeight, ptr) = buv::ChangesInBlock::skip(ptr);
+                auto tmp = uint32_t();
+                std::tie(tmp, ptr) = buv::ChangesInBlock::skip(ptr);
             }
-        }
+            ++blockHeight;
+        };
     }
 
     void writeAmount(size_t x,
@@ -210,7 +214,7 @@ public:
         auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(cib.blockData().blockHeight);
         auto const& blockHeader = cib.blockData();
 
-        auto column1x = mCfg.imageWidth - 1100;
+        auto column1x = mCfg.imageWidth - 1000;
         if (legendX + 150 > column1x) {
             column1x = 20;
         }
@@ -309,7 +313,7 @@ public:
 
         // draw block lines
         auto offset = mCfg.graphRect.h + mCfg.graphRect.y + 4;
-        for (uint32_t h = 0; h < mCfg.maxBlockHeight; h += 10000) {
+        for (uint32_t h = 0; h < mCfg.maxBlockHeight + 1; h += 10000) {
             auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(h);
             auto len = 5;
             bool showText = false;
@@ -317,28 +321,33 @@ public:
                 len *= 2;
                 showText = true;
             }
+            if (h == mCfg.maxBlockHeight) {
+                showText = true;
+            }
             cv::line(mMat, cv::Point(legendX, offset), cv::Point(legendX, offset + len), cv::Scalar(255, 255, 255));
 
             // only print text when distance to current line is large enough, so it's not overwritten
+        }
+
+        // show X axis text
+        for (auto [blockHeight, formattedTime] : mHeightToTimestring) {
+            auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(blockHeight);
             auto distFromMid = std::abs(static_cast<int>(x) - static_cast<int>(legendX));
-            if (showText && distFromMid > 60) {
-                write(mMat,
-                      legendX,
-                      offset + len + 17,
-                      h == 0 ? Origin::top_left : Origin::top_center,
-                      "{}{}",
-                      h / 1000,
-                      h == 0 ? "" : "k");
+            auto align = Origin::top_center;
+            if (blockHeight == 0) {
+                align = Origin::top_left;
             }
-            if (showText && distFromMid > 190) {
-                // auto formattedTime = date::format("%F", std::chrono::floor<std::chrono::seconds>(info.blockHeaders[h].time));
-                if (auto it = mHeightToTimestring.find(h); it != mHeightToTimestring.end()) {
-                    write(mMat,
-                          legendX,
-                          offset + len + 30 + 17,
-                          h == 0 ? Origin::top_left : Origin::top_center,
-                          it->second.c_str());
-                }
+            //if (blockHeight == mCfg.maxBlockHeight) {
+                //align = Origin::top_right;
+            //}
+
+            auto len = 10;
+            if (distFromMid > 70) {
+                write(mMat, legendX, offset + len + 17, align, "{}{}", blockHeight / 1000, blockHeight == 0 ? "" : "k");
+            }
+
+            if (distFromMid > 190) {
+                write(mMat, legendX, offset + len + 30 + 17, align, formattedTime.c_str());
             }
         }
 
