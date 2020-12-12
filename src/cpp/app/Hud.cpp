@@ -190,7 +190,7 @@ public:
             column1x = 20;
         }
 
-        auto column2x = column1x + 240;
+        auto column2x = column1x + 960;
 
         auto y = 10;
         auto lineSpacing = 30;
@@ -200,47 +200,55 @@ public:
         // https://www.blockchain.com/btc/block/548847
 
         write(mMat, column1x, y, Origin::top_left, "Hash");
-        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.hash).c_str());
+        writeMono(mMat, column2x, y, Origin::top_right, util::toHex(blockHeader.hash).c_str());
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Height");
+        write(mMat, column2x, y, Origin::top_right, "{}", blockHeader.blockHeight);
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Timestamp");
         write(mMat,
               column2x,
               y,
-              Origin::top_left,
+              Origin::top_right,
               date::format("%F %T %Z", UnixClockSeconds(std::chrono::seconds(blockHeader.time))).c_str());
         y += lineSpacing;
 
-        write(mMat, column1x, y, Origin::top_left, "Height");
-        write(mMat, column2x, y, Origin::top_left, "{}", blockHeader.blockHeight);
+        write(mMat, column1x, y, Origin::top_left, "Size");
+        write(mMat, column2x, y, Origin::top_right, "{} B", blockHeader.size);
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Weight units");
+        write(mMat, column2x, y, Origin::top_right, "{} WU", blockHeader.weight);
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Number of Transactions");
-        write(mMat, column2x, y, Origin::top_left, "{}", blockHeader.nTx);
+        write(mMat, column2x, y, Origin::top_right, "{}", blockHeader.nTx);
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Difficulty");
-        write(mMat, column2x, y, Origin::top_left, "{}", blockHeader.difficulty);
+        write(mMat, column2x, y, Origin::top_right, "{}", blockHeader.difficulty());
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Merkle root");
-        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.merkleRoot).c_str());
+        writeMono(mMat, column2x, y, Origin::top_right, util::toHex(blockHeader.merkleRoot).c_str());
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "chainwork");
-        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.chainWork).c_str());
+        writeMono(mMat, column2x, y, Origin::top_right, util::toHex(blockHeader.chainWork).c_str());
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Version");
-        writeMono(mMat, column2x, y, Origin::top_left, "0x{:x}", blockHeader.version);
+        writeMono(mMat, column2x, y, Origin::top_right, "0x{:x}", blockHeader.version);
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Bits");
-        writeMono(mMat, column2x, y, Origin::top_left, "0x{}", util::toHex(blockHeader.bits));
+        writeMono(mMat, column2x, y, Origin::top_right, "0x{}", util::toHex(blockHeader.bits));
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Nonce");
-        writeMono(mMat, column2x, y, Origin::top_left, "0x{:x}", blockHeader.nonce);
+        writeMono(mMat, column2x, y, Origin::top_right, "0x{:x}", blockHeader.nonce);
         y += lineSpacing;
     }
 

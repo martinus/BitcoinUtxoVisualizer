@@ -30,12 +30,12 @@ namespace {
 
 [[nodiscard]] auto integrateBlockData(simdjson::dom::element const& blockData, buv::Utxo& utxo) -> buv::ChangesInBlock {
     auto cib = buv::ChangesInBlock();
-
     auto& bd = cib.beginBlock(blockData["height"].get_uint64());
+
     bd.hash = util::fromHex<32>(blockData["hash"].get_string().value().data());
     bd.merkleRoot = util::fromHex<32>(blockData["merkleroot"].get_string().value().data());
     bd.chainWork = util::fromHex<32>(blockData["chainwork"].get_string().value().data());
-    bd.difficulty = blockData["difficulty"].get_uint64();
+    bd.difficulty(blockData["difficulty"].get_double());
     bd.version = blockData["version"].get_uint64();
     bd.time = blockData["time"].get_uint64().value();
     bd.medianTime = blockData["mediantime"].get_uint64().value();
@@ -93,17 +93,13 @@ struct ResourceData {
 } // namespace
 
 TEST_CASE("utxo_to_change" * doctest::skip()) {
-    LOG("");
     auto cfg = buv::parseCfg(util::args::get("-cfg").value());
 
-    LOG("");
     auto cli = util::HttpClient::create(cfg.bitcoinRpcUrl.c_str());
     auto jsonParser = simdjson::dom::parser();
 
-    LOG("");
-
     auto allBlockHashes = buv::fetchAllBlockHashes(cli);
-    LOG("got {} blocks", allBlockHashes.size());
+    LOG("got {} hashes", allBlockHashes.size());
 
     auto throttler = util::ThrottlePeriodic(1s);
     // auto utxoDumpThrottler = util::LogThrottler(20s);

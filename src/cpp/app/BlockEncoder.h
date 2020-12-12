@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fmt/format.h>
+
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -48,9 +50,6 @@ public:
 
 struct BlockData {
     // fields are ordered by alignment requirements (not size)
-    // 8
-    uint64_t difficulty{};
-
     // 4
     uint32_t time{};
     uint32_t medianTime{};
@@ -63,10 +62,23 @@ struct BlockData {
     uint32_t weight{};
 
     // 1
+
+    // difficulty as array so it has unique object representation. floating point sucks.
+    std::array<uint8_t, sizeof(double)> difficultyArray{};
     std::array<uint8_t, 4> bits{};
     std::array<uint8_t, 32> hash{};
     std::array<uint8_t, 32> merkleRoot{};
     std::array<uint8_t, 32> chainWork{};
+
+    [[nodiscard]] auto difficulty() const -> double {
+        auto d = double();
+        std::memcpy(&d, difficultyArray.data(), sizeof(double));
+        return d;
+    }
+
+    void difficulty(double d) {
+        std::memcpy(difficultyArray.data(), &d, sizeof(double));
+    }
 };
 
 [[nodiscard]] inline auto operator==(BlockData const& a, BlockData const& b) -> bool {
@@ -141,3 +153,9 @@ public:
 };
 
 } // namespace buv
+
+template <>
+struct fmt::formatter<buv::BlockData> {
+    static auto parse(fmt::format_parse_context& ctx) -> format_parse_context::iterator;
+    static auto format(buv::BlockData const& bd, format_context& ctx) -> format_context::iterator;
+};

@@ -2,6 +2,7 @@
 
 #include <util/BinaryStreamWriter.h>
 #include <util/VarInt.h>
+#include <util/hex.h>
 #include <util/writeBinary.h>
 
 #include <fmt/format.h>
@@ -53,7 +54,7 @@ auto ChangesInBlock::encode() const -> std::string {
     util::writeArray<32>(mBlockData.hash, data);
     util::writeArray<32>(mBlockData.merkleRoot, data);
     util::writeArray<32>(mBlockData.chainWork, data);
-    data += varIntEncoder.encode<uint64_t>(mBlockData.difficulty);
+    util::writeArray<8>(mBlockData.difficultyArray, data);
     util::writeBinary<4>(mBlockData.version, data);
     util::writeBinary<4>(mBlockData.time, data);
     util::writeBinary<4>(mBlockData.medianTime, data);
@@ -168,7 +169,7 @@ auto ChangesInBlock::decode(ChangesInBlock&& reusableChanges, char const* ptr) -
     util::read<32>(payloadPtr, bd.hash);
     util::read<32>(payloadPtr, bd.merkleRoot);
     util::read<32>(payloadPtr, bd.chainWork);
-    util::VarInt::decode<uint64_t>(bd.difficulty, payloadPtr);
+    util::read<8>(payloadPtr, bd.difficultyArray);
     util::read<4>(payloadPtr, bd.version);
     util::read<4>(payloadPtr, bd.time);
     util::read<4>(payloadPtr, bd.medianTime);
@@ -212,3 +213,35 @@ auto ChangesInBlock::decode(ChangesInBlock&& reusableChanges, char const* ptr) -
 }
 
 } // namespace buv
+
+namespace fmt {
+
+auto formatter<buv::BlockData>::parse(format_parse_context& ctx) -> format_parse_context::iterator {
+    const auto* it = ctx.begin();
+    if (it != ctx.end() && *it != '}') {
+        throw format_error("invalid format for buv::BlockData");
+    }
+    return it;
+}
+
+auto formatter<buv::BlockData>::format(buv::BlockData const& bd, format_context& ctx) -> format_context::iterator {
+    return format_to(
+        ctx.out(),
+        "\n{:>70} hash\n{:70} strippedsize\n{:70} size\n{:70} weight\n{:70} height\n{:#70x} version\n{:>70} merkleroot\n{:70} time\n{:70} medianTime\n{:70} nonce\n{:>70} bits\n{:70} difficulty\n{:>70} chainWork\n{:70} nTx",
+        util::toHex(bd.hash),
+        bd.strippedSize,
+        bd.size,
+        bd.weight,
+        bd.blockHeight,
+        bd.version,
+        util::toHex(bd.merkleRoot),
+        bd.time,
+        bd.medianTime,
+        bd.nonce,
+        util::toHex(bd.bits),
+        bd.difficulty(),
+        util::toHex(bd.chainWork),
+        bd.nTx);
+}
+
+} // namespace fmt

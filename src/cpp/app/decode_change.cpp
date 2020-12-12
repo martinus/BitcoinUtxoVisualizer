@@ -26,13 +26,17 @@ TEST_CASE("decode_change" * doctest::skip()) {
 
         // at least a single change should occur, because coinbase
         REQUIRE(!cib.changeAtBlockheights().empty());
+
+        if (cib.blockData().blockHeight == 170000) {
+            LOG("{}", cib.blockData());
+        }
         return true;
     });
 
     auto after = std::chrono::steady_clock::now();
     auto duration = after - before;
 
-    LOG("finished!");
+    LOG("finished {} blocks!", expectedBlockHeight);
     LOG("\t{:15.3f} ms processing time", std::chrono::duration<double, std::milli>(duration).count());
     LOG("\t{:15.3f} M blocks per second processed ",
         expectedBlockHeight / (1e6 * std::chrono::duration<double>(after - before).count()));

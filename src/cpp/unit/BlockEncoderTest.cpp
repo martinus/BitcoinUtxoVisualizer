@@ -9,7 +9,7 @@
 TEST_CASE("block_encoder_test_simple") {
     auto cib = buv::ChangesInBlock();
     auto& bd = cib.beginBlock(123456);
-    bd.difficulty = 1234;
+    bd.difficulty(1234);
     cib.finalizeBlock();
 
     auto data = cib.encode();
@@ -37,7 +37,7 @@ auto makeBlockData(int offset, buv::BlockData& bd) {
         bd.merkleRoot[i] = static_cast<uint8_t>(offset + i + 1);
         bd.chainWork[i] = static_cast<uint8_t>(offset + i + 2);
     }
-    bd.difficulty = 12345678 + offset;
+    bd.difficulty(78 + offset);
     bd.time = 999999 + offset;
     bd.medianTime = 888888 + offset;
     bd.version = 123321 + offset;
