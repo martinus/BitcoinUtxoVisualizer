@@ -18,7 +18,7 @@ namespace buv {
 // the whole density map each time we want to extract the image.
 class DensityToImage {
     // density 1 should map to 0, NEVER below 0.
-    [[nodiscard]] auto scaleDensityToColor(size_t density) const -> double {
+    [[nodiscard]] static auto scaleDensityToColor(size_t density) -> double {
         // log scales not so well, because for small numbers it has huge color jumps
         // return std::log(density);
         // return std::tanh(2.0 * (static_cast<double>(density) - 1.0) / m_max_included_value);

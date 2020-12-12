@@ -15,18 +15,15 @@ class SatoshiBlockheightToPixel {
     Rect<size_t> mRect{};
 
 public:
-    inline explicit SatoshiBlockheightToPixel(Cfg const& cfg)
+    inline explicit SatoshiBlockheightToPixel(Cfg const& cfg, uint32_t numBlocks)
         : mFnSatoshi(std::log(static_cast<double>(cfg.maxSatoshi)),
-                     0.0,
+                     0,
                      std::log(static_cast<double>(cfg.minSatoshi)),
                      static_cast<double>(cfg.graphRect.h))
-        , mFnBlock(static_cast<double>(cfg.minBlockHeight),
-                   0,
-                   static_cast<double>(cfg.maxBlockHeight),
-                   static_cast<double>(cfg.graphRect.w))
+        , mFnBlock(0, 0, static_cast<double>(numBlocks - 1), static_cast<double>(cfg.graphRect.w))
         , mRect(cfg.graphRect) {
         LOG("Satoshi from {}-{} -> {}-{}", cfg.maxSatoshi, cfg.minSatoshi, 0.0, static_cast<double>(cfg.graphRect.h));
-        LOG("Height from {}-{} -> {}-{}", cfg.minBlockHeight, cfg.maxBlockHeight, 0, static_cast<double>(cfg.graphRect.w));
+        LOG("Height from {}-{} -> {}-{}", 0, numBlocks - 1, 0, static_cast<double>(cfg.graphRect.w));
     }
 
     [[nodiscard]] inline auto satoshiToPixelHeight(int64_t satoshi) const -> size_t {

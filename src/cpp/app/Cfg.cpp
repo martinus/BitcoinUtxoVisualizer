@@ -62,8 +62,6 @@ auto parseCfg(std::filesystem::path const& cfgFile) -> Cfg {
 
     cfg.minSatoshi = load<int64_t>(data, "minSatoshi");
     cfg.maxSatoshi = load<int64_t>(data, "maxSatoshi");
-    cfg.minBlockHeight = load<uint64_t>(data, "minBlockHeight");
-    cfg.maxBlockHeight = load<uint64_t>(data, "maxBlockHeight");
     cfg.startShowAtBlockHeight = load<uint64_t>(data, "startShowAtBlockHeight");
     cfg.skipBlocks = load<uint64_t>(data, "skipBlocks");
     cfg.repeatLastBlockTimes = load<uint64_t>(data, "repeatLastBlockTimes");

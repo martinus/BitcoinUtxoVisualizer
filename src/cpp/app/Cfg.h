@@ -24,9 +24,6 @@ struct Cfg {
     Rect<size_t> graphRect{};
     int64_t minSatoshi{};
     int64_t maxSatoshi{};
-    uint32_t minBlockHeight{};
-    uint32_t maxBlockHeight{};
-
     uint32_t startShowAtBlockHeight{};
     uint32_t skipBlocks{1};
     uint32_t repeatLastBlockTimes{0};

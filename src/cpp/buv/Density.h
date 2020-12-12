@@ -20,9 +20,9 @@ namespace buv {
 // Integrates change data into an density image.
 class Density {
 public:
-    explicit Density(Cfg const& cfg)
+    explicit Density(Cfg const& cfg, uint32_t numBlocks)
         : mCfg(cfg)
-        , mSatoshiBlockheightToPixel(cfg)
+        , mSatoshiBlockheightToPixel(cfg, numBlocks)
         , m_data(cfg.imageWidth * cfg.imageHeight, 0)
         , m_last_data(nullptr)
         , m_pixel_set_with_history(cfg.imageWidth * cfg.imageHeight, 50)

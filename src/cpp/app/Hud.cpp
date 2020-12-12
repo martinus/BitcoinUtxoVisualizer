@@ -163,12 +163,14 @@ class HudImpl : public Hud {
     cv::Mat mMat{};
     SatoshiBlockheightToPixel mSatoshiBlockheightToPixel;
     std::map<uint32_t, std::string> mHeightToTimestring{};
+    uint32_t mNumBlocks{};
 
 public:
-    explicit HudImpl(Cfg const& cfg, util::Mmap const& mmappedFile)
+    explicit HudImpl(Cfg const& cfg, uint32_t numBlocks, util::Mmap const& mmappedFile)
         : mCfg(cfg)
         , mMat(cfg.imageHeight, cfg.imageWidth, CV_8UC3)
-        , mSatoshiBlockheightToPixel(cfg) {
+        , mSatoshiBlockheightToPixel(cfg, numBlocks)
+        , mNumBlocks(numBlocks) {
 
         // iterate all blocks until end, store the time of each 100k block.
         if (!mmappedFile.is_open()) {
@@ -179,12 +181,12 @@ public:
 
         auto blockHeight = uint32_t();
         auto nextTargetBlockHeight = uint32_t();
-        while (blockHeight <= mCfg.maxBlockHeight) {
+        while (blockHeight < numBlocks) {
             if (blockHeight == nextTargetBlockHeight) {
                 auto [cib, newPtr] = buv::ChangesInBlock::decode(ptr);
                 nextTargetBlockHeight += 100000;
-                if (nextTargetBlockHeight > mCfg.maxBlockHeight) {
-                    nextTargetBlockHeight = mCfg.maxBlockHeight;
+                if (nextTargetBlockHeight > numBlocks - 1) {
+                    nextTargetBlockHeight = numBlocks - 1;
                 }
                 ptr = newPtr;
                 auto formattedTime = date::format("%F", UnixClockSeconds(std::chrono::seconds(cib.blockData().time)));
@@ -297,7 +299,6 @@ public:
 
         // draw satoshi lines
         auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(blockHeader.blockHeight);
-        // auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(mCfg.maxBlockHeight);
         auto oneBtc = int64_t(100'000'000);
         for (int64_t mult = 1; mult <= oneBtc * 10000; mult *= 10) {
             for (int64_t digit = 1; digit < 10; ++digit) {
@@ -313,7 +314,7 @@ public:
 
         // draw block lines
         auto offset = mCfg.graphRect.h + mCfg.graphRect.y + 4;
-        for (uint32_t h = 0; h < mCfg.maxBlockHeight + 1; h += 10000) {
+        for (uint32_t h = 0; h < mNumBlocks; h += 10000) {
             auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(h);
             auto len = 5;
             bool showText = false;
@@ -321,7 +322,7 @@ public:
                 len *= 2;
                 showText = true;
             }
-            if (h == mCfg.maxBlockHeight) {
+            if (h == mNumBlocks - 1) {
                 showText = true;
             }
             cv::line(mMat, cv::Point(legendX, offset), cv::Point(legendX, offset + len), cv::Scalar(255, 255, 255));
@@ -337,9 +338,6 @@ public:
             if (blockHeight == 0) {
                 align = Origin::top_left;
             }
-            //if (blockHeight == mCfg.maxBlockHeight) {
-                //align = Origin::top_right;
-            //}
 
             auto len = 10;
             if (distFromMid > 70) {
@@ -387,8 +385,8 @@ public:
     }
 };
 
-auto Hud::create(Cfg const& cfg, util::Mmap const& mmappedFile) -> std::unique_ptr<Hud> {
-    return std::make_unique<HudImpl>(cfg, mmappedFile);
+auto Hud::create(Cfg const& cfg, uint32_t numBlocks, util::Mmap const& mmappedFile) -> std::unique_ptr<Hud> {
+    return std::make_unique<HudImpl>(cfg, numBlocks, mmappedFile);
 }
 
 } // namespace buv

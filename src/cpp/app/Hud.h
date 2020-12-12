@@ -11,7 +11,7 @@ namespace buv {
 // head up display
 class Hud {
 public:
-    static auto create(Cfg const& cfg, util::Mmap const& mmappedFile) -> std::unique_ptr<Hud>;
+    static auto create(Cfg const& cfg, uint32_t numBlocks, util::Mmap const& mmappedFile) -> std::unique_ptr<Hud>;
 
     Hud();
     virtual ~Hud();
