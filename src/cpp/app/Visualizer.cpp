@@ -30,7 +30,7 @@ void saveImagePPM(size_t width, size_t height, uint8_t const* data, std::string 
 //
 // 1. Start ffmpeg or ffplay (see below)
 //    * ffplay -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen"
-//    * ffmpeg -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen" -c:v libx264 -profile:v high -bf 2 -g 30 -tune stillimage -preset slower -crf 23 -pix_fmt yuv420p out.mp4
+//    * ffmpeg -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen" -c:v libx264 -profile:v high -bf 2 -g 30 -tune stillimage -preset slower -crf 23 -pix_fmt yuv420p -movflags faststart out.mp4
 //        -crf 23: 23GB
 //    * recommended settings: https://gist.github.com/mikoim/27e4e0dc64e384adbcb91ff10a2d3678
 //
@@ -83,13 +83,12 @@ TEST_CASE("visualizer" * doctest::skip()) {
     });
 
     // fade out & keep last image for 1 minute
-    auto numFadeoutFrames = uint32_t(60 * 60);
-    for (uint32_t i = 0; i < numFadeoutFrames; ++i) {
+    for (uint32_t i = 0; i < cfg.repeatLastBlockTimes; ++i) {
         density.fadeOut(lastCib.blockData().blockHeight + i + 1, [&](uint8_t const* data) {
             hud->draw(data, lastCib);
             socketStream->write(hud->data(), hud->size());
 
-            if (i == numFadeoutFrames - 1) {
+            if (i == cfg.repeatLastBlockTimes - 1) {
                 auto imgFileName = fmt::format("img_{:07}.ppm", lastCib.blockData().blockHeight);
                 saveImagePPM(cfg.imageWidth, cfg.imageHeight, hud->data(), imgFileName);
             }

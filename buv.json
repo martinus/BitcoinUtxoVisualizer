@@ -13,9 +13,9 @@
     "maxSatoshi": 1000000000000,
     
     "skipBlocks": 0,
-    "repeatLastBlockTimes": 100,
+    "repeatLastBlockTimes": 3600,
 
-    "startShowAtBlockHeight": 260046,
+    "startShowAtBlockHeight": 0,
     "connectionIpAddr": "127.0.0.1",
     "connectionSocket": 12987,
     "colorMap": "turbo",
