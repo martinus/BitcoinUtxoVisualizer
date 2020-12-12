@@ -8,7 +8,10 @@ template <typename T>
 void testEncDec(T val) {
     auto varint = util::VarInt();
     auto sv = varint.encode(val);
-    auto [decVal, ptr] = util::VarInt::decode<T>(sv.data());
+
+    auto ptr = sv.data();
+    auto decVal = T();
+    util::VarInt::decode<T>(decVal, ptr);
     REQUIRE(ptr == sv.end());
     REQUIRE(decVal == val);
 }

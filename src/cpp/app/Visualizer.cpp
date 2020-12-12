@@ -1,4 +1,4 @@
-#include <app/BlockHeader.h>
+#include "app/fetchAllBlockHashes.h"
 #include <app/Cfg.h>
 #include <app/Hud.h>
 #include <app/forEachChange.h>
@@ -49,27 +49,20 @@ TEST_CASE("visualizer" * doctest::skip()) {
     LOG("{} blocks, overwritting cfg with that setting", numBlocks);
     cfg.maxBlockHeight = numBlocks - 1;
 
-    LOG("loading '{}'", cfg.blockHeadersFile);
-    auto allBlockHeaders = buv::BlockHeader::load(cfg.blockHeadersFile);
-    LOG("{} blocks in blocksHeadersFile", allBlockHeaders.size());
-
     auto hud = buv::Hud::create(cfg);
     auto socketStream = buv::SocketStream::create(cfg.connectionIpAddr.c_str(), cfg.connectionSocket);
 
     buv::forEachChange(file, [&](buv::ChangesInBlock const& cib) {
-        LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
+        auto blockHeight = cib.blockData().blockHeight;
+        LOGIF(throttler(), "block {}, {} changes", blockHeight, cib.changeAtBlockheights().size());
 
-        density.begin_block(cib.blockHeight());
+        density.begin_block(blockHeight);
         for (auto const& change : cib.changeAtBlockheights()) {
             density.change(change.blockHeight(), change.satoshi());
         }
 
-        auto hudInfo = buv::HudBlockInfo();
-        hudInfo.blockHeaders = allBlockHeaders.data();
-        hudInfo.blockHeight = cib.blockHeight();
-
-        density.end_block(cib.blockHeight(), [&](uint8_t const* data) {
-            hud->draw(data, hudInfo);
+        density.end_block(blockHeight, [&](uint8_t const* data) {
+            hud->draw(data, cib);
             socketStream->write(hud->data(), hud->size());
         });
 
@@ -80,7 +73,7 @@ TEST_CASE("visualizer" * doctest::skip()) {
                 return false;
 
             case 's': {
-                auto imgFileName = fmt::format("img_{:07}.ppm", cib.blockHeight());
+                auto imgFileName = fmt::format("img_{:07}.ppm", blockHeight);
                 LOG("Writing image '{}'", imgFileName);
                 saveImagePPM(cfg.imageWidth, cfg.imageHeight, hud->data(), imgFileName);
             }

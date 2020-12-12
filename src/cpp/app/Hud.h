@@ -1,16 +1,11 @@
 #pragma once
 
-#include <app/BlockHeader.h>
+#include <app/BlockEncoder.h>
 #include <app/Cfg.h>
 
 #include <memory>
 
 namespace buv {
-
-struct HudBlockInfo {
-    BlockHeader const* blockHeaders{};
-    uint32_t blockHeight{};
-};
 
 // head up display
 class Hud {
@@ -26,7 +21,7 @@ public:
     auto operator=(Hud&&) -> Hud& = delete;
 
     // Copies rgbSource, then draws dat based on the given info.
-    virtual void draw(uint8_t const* rgbSource, HudBlockInfo const& info) = 0;
+    virtual void draw(uint8_t const* rgbSource, ChangesInBlock const& cib) = 0;
 
     // Returns the drawn RGB data.
     [[nodiscard]] virtual auto data() const -> uint8_t const* = 0;

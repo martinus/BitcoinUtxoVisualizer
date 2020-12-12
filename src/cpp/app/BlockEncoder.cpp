@@ -2,15 +2,18 @@
 
 #include <util/BinaryStreamWriter.h>
 #include <util/VarInt.h>
+#include <util/writeBinary.h>
 
 #include <fmt/format.h>
 
 namespace buv {
 
-void ChangesInBlock::beginBlock(uint32_t blockHeight) {
+auto ChangesInBlock::beginBlock(uint32_t blockHeight) -> BlockData& {
     mIsFinalized = false;
-    mBlockHeight = blockHeight;
+    mBlockData = {};
+    mBlockData.blockHeight = blockHeight;
     mChangeAtBlockheights.clear();
+    return mBlockData;
 }
 
 void ChangesInBlock::finalizeBlock() {
@@ -22,7 +25,7 @@ void ChangesInBlock::finalizeBlock() {
 }
 
 void ChangesInBlock::addChange(int64_t satoshi, uint32_t blockHeight) {
-    if (satoshi > 0 && blockHeight != mBlockHeight) {
+    if (satoshi > 0 && blockHeight != mBlockData.blockHeight) {
         throw std::runtime_error("satoshi > 0 but blockheight does not match!");
     }
     if (mIsFinalized) {
@@ -38,12 +41,28 @@ auto ChangesInBlock::encode() const -> std::string {
 
     auto data = std::string();
 
-    data += std::string_view("BLK\x01");
-    data.append(reinterpret_cast<char const*>(&mBlockHeight), sizeof(mBlockHeight));
+    data += std::string_view("BLK\x02");
+    data.append(reinterpret_cast<char const*>(&mBlockData.blockHeight), sizeof(mBlockData.blockHeight));
 
     // skip 4 bytes, which will later contain the size of the remaining payload. This can be used to quickly skip to the next
     // block.
     data.append(4, '\0');
+
+    // header info
+    auto varIntEncoder = util::VarInt();
+    util::writeArray<32>(mBlockData.hash, data);
+    util::writeArray<32>(mBlockData.merkleRoot, data);
+    util::writeArray<32>(mBlockData.chainWork, data);
+    data += varIntEncoder.encode<uint64_t>(mBlockData.difficulty);
+    util::writeBinary<4>(mBlockData.version, data);
+    util::writeBinary<4>(mBlockData.time, data);
+    util::writeBinary<4>(mBlockData.medianTime, data);
+    util::writeBinary<4>(mBlockData.nonce, data);
+    util::writeArray<4>(mBlockData.bits, data);
+    data += varIntEncoder.encode<uint32_t>(mBlockData.nTx);
+    data += varIntEncoder.encode<uint32_t>(mBlockData.size);
+    data += varIntEncoder.encode<uint32_t>(mBlockData.strippedSize);
+    data += varIntEncoder.encode<uint32_t>(mBlockData.weight);
 
     if (!mChangeAtBlockheights.empty()) {
         // now comes the data in mChangeAtBlockheight. Sorted by satoshi, so the satoshi's only increase.
@@ -55,9 +74,7 @@ auto ChangesInBlock::encode() const -> std::string {
         //
         // We also store diffs of block size, but they will be encoded as signed integers, because they can be quite random.
         // already sorted in finishBlock()
-        auto varIntEncoder = util::VarInt();
 
-        // TODO(martinus) encode first amount correctly
         auto it = mChangeAtBlockheights.begin();
         data += varIntEncoder.encode<int64_t>(it->satoshi());
         data += varIntEncoder.encode<uint64_t>(it->blockHeight());
@@ -80,7 +97,7 @@ auto ChangesInBlock::encode() const -> std::string {
         }
 
         // finally, fill in the payload size
-        // "BLK0" + blockheight + payloadSize
+        // "BLKx" + blockheight + payloadSize
         auto payloadSize = static_cast<uint32_t>(data.size() - (4U + 4U + 4U));
         std::memcpy(data.data() + (4U + 4U), &payloadSize, 4U);
     }
@@ -88,8 +105,8 @@ auto ChangesInBlock::encode() const -> std::string {
     return data;
 }
 
-[[nodiscard]] auto ChangesInBlock::blockHeight() const noexcept -> uint32_t {
-    return mBlockHeight;
+[[nodiscard]] auto ChangesInBlock::blockData() const noexcept -> BlockData const& {
+    return mBlockData;
 }
 
 [[nodiscard]] auto ChangesInBlock::changeAtBlockheights() const noexcept -> std::vector<ChangeAtBlockheight> const& {
@@ -111,8 +128,8 @@ auto parseHeader(char const* ptr) -> std::pair<Header, char const*> {
     auto header = Header();
     std::memcpy(&header, ptr, sizeof(Header));
 
-    if (header.magicMarker != uint32_t(0x014b4c42)) {
-        throw std::runtime_error("Decoding error, 'BLK\\1' does not match");
+    if (header.magicMarker != uint32_t(0x024b4c42)) {
+        throw std::runtime_error("Decoding error, 'BLK\\2' does not match");
     }
 
     return std::make_pair(header, ptr + sizeof(Header));
@@ -126,7 +143,7 @@ auto ChangesInBlock::skip(char const* ptr) -> std::pair<uint32_t, char const*> {
 }
 
 [[nodiscard]] auto ChangesInBlock::operator==(ChangesInBlock const& other) const noexcept -> bool {
-    return mBlockHeight == other.mBlockHeight && mChangeAtBlockheights == other.mChangeAtBlockheights &&
+    return mBlockData.blockHeight == other.mBlockData.blockHeight && mChangeAtBlockheights == other.mChangeAtBlockheights &&
            mIsFinalized == other.mIsFinalized;
 }
 
@@ -142,26 +159,48 @@ auto ChangesInBlock::decode(ChangesInBlock&& reusableChanges, char const* ptr) -
     auto [header, payloadPtr] = parseHeader(ptr);
     reusableChanges.mChangeAtBlockheights.clear();
 
-    reusableChanges.mBlockHeight = header.blockHeight;
+    auto& bd = reusableChanges.mBlockData;
+    bd.blockHeight = header.blockHeight;
 
     const auto* endPtr = payloadPtr + header.numBytes;
 
+    // decode block header info
+    util::read<32>(payloadPtr, bd.hash);
+    util::read<32>(payloadPtr, bd.merkleRoot);
+    util::read<32>(payloadPtr, bd.chainWork);
+    util::VarInt::decode<uint64_t>(bd.difficulty, payloadPtr);
+    util::read<4>(payloadPtr, bd.version);
+    util::read<4>(payloadPtr, bd.time);
+    util::read<4>(payloadPtr, bd.medianTime);
+    util::read<4>(payloadPtr, bd.nonce);
+    util::read<4>(payloadPtr, bd.bits);
+    util::VarInt::decode<uint32_t>(bd.nTx, payloadPtr);
+    util::VarInt::decode<uint32_t>(bd.size, payloadPtr);
+    util::VarInt::decode<uint32_t>(bd.strippedSize, payloadPtr);
+    util::VarInt::decode<uint32_t>(bd.weight, payloadPtr);
+
+    // decode transaction info
+
     auto satoshi = int64_t();
-    auto blockHeight = int64_t();
-    std::tie(satoshi, payloadPtr) = util::VarInt::decode<int64_t>(payloadPtr);
-    std::tie(blockHeight, payloadPtr) = util::VarInt::decode<uint64_t>(payloadPtr);
-    reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
+    util::VarInt::decode<int64_t>(satoshi, payloadPtr);
+
+    // use a tmp variable so we con decode as uint
+    auto tmpBlockHeight = uint64_t();
+    util::VarInt::decode<uint64_t>(tmpBlockHeight, payloadPtr);
+    reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, tmpBlockHeight);
+
+    auto blockHeight = int64_t(tmpBlockHeight);
 
     while (payloadPtr < endPtr) {
         auto diffSatoshi = uint64_t();
         auto diffBlockheight = int64_t();
 
-        util::VarInt::decodeV2<uint64_t>(diffSatoshi, payloadPtr);
+        util::VarInt::decode<uint64_t>(diffSatoshi, payloadPtr);
         satoshi += diffSatoshi;
 
         if (satoshi <= 0) {
             // only decode blockheight if satoshi was spent
-            util::VarInt::decodeV2<int64_t>(diffBlockheight, payloadPtr);
+            util::VarInt::decode<int64_t>(diffBlockheight, payloadPtr);
             blockHeight += diffBlockheight;
             reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
         } else {

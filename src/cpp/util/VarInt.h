@@ -57,6 +57,12 @@ template <typename UT>
     if constexpr (sizeof(UT) == 4) {
         return val;
     }
+
+    if constexpr (sizeof(UT) <= 4) {
+        // can't have more than 5 bytes for uint32_t
+        return val;
+    }
+
     if (b < 128) {
         return val;
     };
@@ -123,29 +129,7 @@ public:
 
     // decodes from ptr, returns the decoded value and the new iterator position.
     template <typename T>
-    [[nodiscard]] static auto decode(char const* ptr) -> std::pair<T, char const*> {
-        using UT = std::make_unsigned_t<T>;
-        auto byte = uint8_t();
-        auto uVal = UT();
-        auto shift = size_t();
-        do {
-            byte = static_cast<uint8_t>(*ptr);
-            uVal |= static_cast<UT>(byte & uint8_t(0b0111'1111U)) << shift;
-            ++ptr;
-            shift += 7U;
-        } while (byte & uint8_t(0b1000'0000U));
-        if constexpr (std::is_unsigned_v<T>) {
-            return std::make_pair(uVal, ptr);
-        } else {
-            // zig zag decode
-            auto val = static_cast<T>((uVal >> 1U) ^ -(uVal & 1));
-            return std::make_pair(val, ptr);
-        }
-    }
-
-    // decodes from ptr, returns the decoded value and the new iterator position.
-    template <typename T>
-    static void decodeV2(T& val, char const*& ptr) {
+    static void decode(T& val, char const*& ptr) {
         if constexpr (std::is_unsigned_v<T>) {
             val = decodeUint<T>(ptr);
         } else {

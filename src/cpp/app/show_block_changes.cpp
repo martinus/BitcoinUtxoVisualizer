@@ -25,7 +25,7 @@ TEST_CASE("show_block_changes" * doctest::skip()) {
     auto [cib, nextPtr] = buv::ChangesInBlock::decode(ptr);
 
     auto sum = int64_t(0);
-    LOG("block {}:", cib.blockHeight());
+    LOG("block {}:", cib.blockData().blockHeight);
     for (auto const& change : cib.changeAtBlockheights()) {
         sum += std::abs(change.satoshi());
         LOG("\t{:15.8f} BTC from {}", change.satoshi() / 100'000'000.0, change.blockHeight());

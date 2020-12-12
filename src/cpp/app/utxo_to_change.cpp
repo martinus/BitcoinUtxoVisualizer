@@ -1,7 +1,7 @@
 #include <app/BlockEncoder.h>
-#include <app/BlockHeader.h>
 #include <app/Cfg.h>
 #include <app/Utxo.h>
+#include <app/fetchAllBlockHashes.h>
 #include <util/HttpClient.h>
 #include <util/Throttle.h>
 #include <util/args.h>
@@ -30,7 +30,21 @@ namespace {
 
 [[nodiscard]] auto integrateBlockData(simdjson::dom::element const& blockData, buv::Utxo& utxo) -> buv::ChangesInBlock {
     auto cib = buv::ChangesInBlock();
-    cib.beginBlock(blockData["height"].get_uint64());
+
+    auto& bd = cib.beginBlock(blockData["height"].get_uint64());
+    bd.hash = util::fromHex<32>(blockData["hash"].get_string().value().data());
+    bd.merkleRoot = util::fromHex<32>(blockData["merkleroot"].get_string().value().data());
+    bd.chainWork = util::fromHex<32>(blockData["chainwork"].get_string().value().data());
+    bd.difficulty = blockData["difficulty"].get_uint64();
+    bd.version = blockData["version"].get_uint64();
+    bd.time = blockData["time"].get_uint64().value();
+    bd.medianTime = blockData["mediantime"].get_uint64().value();
+    bd.nonce = blockData["nonce"].get_uint64();
+    bd.bits = util::fromHex<4>(blockData["bits"].get_string().value().data());
+    bd.nTx = blockData["nTx"].get_uint64();
+    bd.size = blockData["size"].get_uint64();
+    bd.strippedSize = blockData["strippedsize"].get_uint64();
+    bd.weight = blockData["weight"].get_uint64();
 
     auto isCoinbaseTx = true;
     for (auto const& tx : blockData["tx"]) {
@@ -54,14 +68,14 @@ namespace {
 
         // add all outputs from this transaction to the utxo
         auto txid = util::fromHex<buv::txidPrefixSize>(tx["txid"].get_c_str());
-        auto inserter = utxo.inserter(txid, cib.blockHeight());
+        auto inserter = utxo.inserter(txid, bd.blockHeight);
 
         auto n = 0;
         for (auto const& vout : tx["vout"]) {
             auto sat = std::llround(vout["value"].get_double() * 100'000'000);
             // LOG("insert {} {}", util::toHex(txid), n);
             inserter.insert(n, sat);
-            cib.addChange(sat, cib.blockHeight());
+            cib.addChange(sat, bd.blockHeight);
             ++n;
         }
     }
@@ -79,15 +93,17 @@ struct ResourceData {
 } // namespace
 
 TEST_CASE("utxo_to_change" * doctest::skip()) {
+    LOG("");
     auto cfg = buv::parseCfg(util::args::get("-cfg").value());
 
+    LOG("");
     auto cli = util::HttpClient::create(cfg.bitcoinRpcUrl.c_str());
     auto jsonParser = simdjson::dom::parser();
 
-    auto allBlockHeaders = buv::BlockHeader::fetch(cli);
-    LOG("got {} blocks", allBlockHeaders.size());
-    buv::BlockHeader::write(allBlockHeaders, cfg.blockHeadersFile);
-    LOG("wrote blockheaders into '{}'", cfg.blockHeadersFile);
+    LOG("");
+
+    auto allBlockHashes = buv::fetchAllBlockHashes(cli);
+    LOG("got {} blocks", allBlockHashes.size());
 
     auto throttler = util::ThrottlePeriodic(1s);
     // auto utxoDumpThrottler = util::LogThrottler(20s);
@@ -101,13 +117,13 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     }
 
     util::parallelToSequential(
-        util::SequenceId{allBlockHeaders.size()},
+        util::SequenceId{allBlockHashes.size()},
         util::ResourceId{resources.size()},
         util::ConcurrentWorkers{std::thread::hardware_concurrency()},
 
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             auto& res = resources[resourceId.count()];
-            auto hash = util::toHex(allBlockHeaders[sequenceId.count()].hash);
+            auto hash = util::toHex(allBlockHashes[sequenceId.count()]);
 
             res.jsonData = res.cli->get("/rest/block/{}.json", hash);
             res.blockData = res.jsonParser.parse(res.jsonData);
@@ -120,13 +136,13 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
                 if (util::kbhit()) {
                     getchar();
                     LOG("{:10} height, {:10} bytes, {:10.3f} MB max RSS, utxo: {:d}",
-                        cib.blockHeight(),
+                        cib.blockData().blockHeight,
                         res.jsonData.size(),
                         util::maxRss() / 1048576.0,
                         *utxo);
                 } else {
                     LOG("{:10} height, {:10} bytes, {:10.3f} MB max RSS, utxo: {}",
-                        cib.blockHeight(),
+                        cib.blockData().blockHeight,
                         res.jsonData.size(),
                         util::maxRss() / 1048576.0,
                         *utxo);

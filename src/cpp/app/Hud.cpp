@@ -13,6 +13,8 @@
 
 namespace {
 
+using UnixClockSeconds = std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>;
+
 enum class Origin {
     top_left,
     top_center,
@@ -179,9 +181,9 @@ public:
     }
 
     // prints current block info
-    void writeBlockInfo(buv::HudBlockInfo const& info) {
-        auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(info.blockHeight);
-        auto const& blockHeader = info.blockHeaders[info.blockHeight];
+    void writeBlockInfo(ChangesInBlock const& cib) {
+        auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(cib.blockData().blockHeight);
+        auto const& blockHeader = cib.blockData();
 
         auto column1x = mCfg.imageWidth - 1100;
         if (legendX + 150 > column1x) {
@@ -206,11 +208,11 @@ public:
               column2x,
               y,
               Origin::top_left,
-              date::format("%F %T %Z", std::chrono::floor<std::chrono::seconds>(blockHeader.time)).c_str());
+              date::format("%F %T %Z", UnixClockSeconds(std::chrono::seconds(blockHeader.time))).c_str());
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Height");
-        write(mMat, column2x, y, Origin::top_left, "{}", blockHeader.height);
+        write(mMat, column2x, y, Origin::top_left, "{}", blockHeader.blockHeight);
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Number of Transactions");
@@ -222,11 +224,11 @@ public:
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Merkle root");
-        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.merkleroot).c_str());
+        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.merkleRoot).c_str());
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "chainwork");
-        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.chainwork).c_str());
+        writeMono(mMat, column2x, y, Origin::top_left, util::toHex(blockHeader.chainWork).c_str());
         y += lineSpacing;
 
         write(mMat, column1x, y, Origin::top_left, "Version");
@@ -243,7 +245,7 @@ public:
     }
 
     // Copies rgbSource, then draws dat based on the given info.
-    void draw(uint8_t const* rgbSource, HudBlockInfo const& info) override {
+    void draw(uint8_t const* rgbSource, ChangesInBlock const& cib) override {
         std::memcpy(mMat.ptr(), rgbSource, mMat.total() * mMat.elemSize());
 
 #if 0
@@ -251,13 +253,13 @@ public:
         cv::rectangle(
             mMat, cv::Rect(mCfg.graphRect.x, mCfg.graphRect.y, mCfg.graphRect.w, mCfg.graphRect.h), cv::Scalar(0, 155, 20));
 #endif
-        writeBlockInfo(info);
+        writeBlockInfo(cib);
 
-        auto const& blockHeader = info.blockHeaders[info.blockHeight];
-        auto formattedTime = date::format("%F %T", std::chrono::floor<std::chrono::seconds>(blockHeader.time));
+        auto const& blockHeader = cib.blockData();
+        auto formattedTime = date::format("%F %T", UnixClockSeconds(std::chrono::seconds(blockHeader.time)));
 
         // draw satoshi lines
-        auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(blockHeader.height);
+        auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(blockHeader.blockHeight);
         // auto x = mSatoshiBlockheightToPixel.blockheightToPixelWidth(mCfg.maxBlockHeight);
         auto oneBtc = int64_t(100'000'000);
         for (int64_t mult = 1; mult <= oneBtc * 10000; mult *= 10) {
@@ -290,7 +292,8 @@ public:
                 write(mMat, legendX, offset + len + 17, h == 0 ? Origin::top_left : Origin::top_center, "{}k", h / 1000);
             }
             if (showText && distFromMid > 190) {
-                auto formattedTime = date::format("%F", std::chrono::floor<std::chrono::seconds>(info.blockHeaders[h].time));
+                // auto formattedTime = date::format("%F", std::chrono::floor<std::chrono::seconds>(info.blockHeaders[h].time));
+                auto formattedTime = std::string("TODOFIXME");
                 write(
                     mMat, legendX, offset + len + 30 + 17, h == 0 ? Origin::top_left : Origin::top_center, formattedTime.c_str());
             }
@@ -298,7 +301,7 @@ public:
 
         // draw current block marker
         cv::line(mMat, cv::Point(x, offset), cv::Point(x, offset + 15), cv::Scalar(255, 255, 255));
-        write(mMat, x, offset + 10 + 17, Origin::top_center, "{}", blockHeader.height);
+        write(mMat, x, offset + 10 + 17, Origin::top_center, "{}", blockHeader.blockHeight);
         write(mMat, x, offset + 40 + 17, Origin::top_center, "{}", formattedTime);
 
         // draw the legend

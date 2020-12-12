@@ -18,8 +18,8 @@ TEST_CASE("decode_change" * doctest::skip()) {
 
     auto file = util::Mmap("/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1");
     buv::forEachChange(file, [&](buv::ChangesInBlock const& cib) {
-        LOGIF(throttler(), "block {}, {} changes", cib.blockHeight(), cib.changeAtBlockheights().size());
-        REQUIRE(cib.blockHeight() == expectedBlockHeight);
+        LOGIF(throttler(), "block {}, {} changes", cib.blockData().blockHeight, cib.changeAtBlockheights().size());
+        REQUIRE(cib.blockData().blockHeight == expectedBlockHeight);
         ++expectedBlockHeight;
 
         totalChanges += cib.changeAtBlockheights().size();

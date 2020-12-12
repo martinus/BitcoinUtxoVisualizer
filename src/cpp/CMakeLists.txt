@@ -7,11 +7,11 @@ target_sources_local(${PROJECT_NAME}
         util/HttpClient.cpp # put first because it is soooo slow
 
         app/BlockEncoder.cpp
-        app/BlockHeader.cpp
         app/Cfg.cpp
         app/check_blocks.cpp
         app/Chunk.cpp
         app/decode_change.cpp
+        app/fetchAllBlockHashes.cpp
         app/find_distant_color.cpp
         app/Hud.cpp
         app/load_all_block_headers.cpp

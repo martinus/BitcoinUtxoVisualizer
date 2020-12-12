@@ -1,6 +1,9 @@
 #pragma once
 
+#include <array>
+#include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <utility>
 #include <vector>
@@ -43,6 +46,38 @@ public:
     }
 };
 
+struct BlockData {
+    // fields are ordered by alignment requirements (not size)
+    // 8
+    uint64_t difficulty{};
+
+    // 4
+    uint32_t time{};
+    uint32_t medianTime{};
+    uint32_t blockHeight{};
+    uint32_t version{};
+    uint32_t nonce{};
+    uint32_t nTx{};
+    uint32_t size{};
+    uint32_t strippedSize{};
+    uint32_t weight{};
+
+    // 1
+    std::array<uint8_t, 4> bits{};
+    std::array<uint8_t, 32> hash{};
+    std::array<uint8_t, 32> merkleRoot{};
+    std::array<uint8_t, 32> chainWork{};
+};
+
+[[nodiscard]] inline auto operator==(BlockData const& a, BlockData const& b) -> bool {
+    static_assert(std::has_unique_object_representations_v<BlockData>);
+    return 0 == std::memcmp(&a, &b, sizeof(BlockData));
+}
+
+[[nodiscard]] inline auto operator!=(BlockData const& a, BlockData const& b) -> bool {
+    return !(a == b);
+}
+
 // Encodes & decodes block change data
 //
 // The format is designed to be compact, fast to parse, and contain all (amounts, blockheight) tuples of the current block.
@@ -52,9 +87,24 @@ public:
 //
 // field size | description  | data type | commment
 // -----------|--------------|-----------|---
-//          4 | marker       | string    | magic marker "BLK\1". uint32_t with value 0x014b4c42. Always exactly the same.
+//          4 | marker       | string    | magic marker "BLK\x02". Always exactly the same.
 //          4 | block_height | uint32_t  | current block height, successively increasing value
 //          4 | num_bytes    | uint32_t  | size in bytes of the data blob for this blob. Add num_bytes to skip to the next block, then you will point to the marker "BLK\0" of the next block. This is useful to quickly skip to the next block without parsing the data.
+// header info
+//         32 | hash         | binary    | 
+//         32 | merkleroot   | binary    | 
+//         32 | chainwork    | binary    | 
+//          8 | difficulty   | var_uint  | e.g. "19314656404097"
+//          4 | version      | uint32_t  | e.g. "0x20000000"
+//          4 | time         | uint32_t  | unix timestamp in seconds
+//          4 | mediantime   | uint32_t  | unix timestamp in seconds
+//          4 | nonce        | uint32_t  |
+//          4 | bits         | binary    | e.g. "0x170e92aa"
+//         1+ | nTx          | var_uint  | number of transactions
+//         1+ | size         | var_uint  | e.g. 1595162, "1595.162 KB" (/1000)
+//         1+ | strippedsize | var_uint  | e.g. 799405
+//         1+ | weight       | var_uint  | E.g. "3993377 WU" (or 3993.377 KWU, or 998345 vB (3993377 + 3)/4). See https://en.bitcoin.it/wiki/Weight_units
+// transaction info
 //         1+ | amount       | var_int   | var-int (zig-zag encoding) of the smallest change (most likely a negative number)
 //         1+ | block        | var_uint  | var-uint encoded of the block height of the amount
 //  The following fields are repeated until for all spent amounts (satoshi <= 0) Sorted by amount.
@@ -62,16 +112,16 @@ public:
 //         1+ | block_diff   | var_int   | var-int (zig-zag encoding) of block difference to previous entry.
 //  The following fields are repeated until for all new amounts (satoshi > 0). Sorted by amount. No need for blockheight because it must be the current block.
 //         1+ | amount_diff  | var_uint  | var-uint encoded difference to previous amount. Guaranteed to be positive due to the sorting.
-
 //
 // clang-format on
 class ChangesInBlock {
-    uint32_t mBlockHeight{};
     std::vector<ChangeAtBlockheight> mChangeAtBlockheights{};
+    BlockData mBlockData{};
     bool mIsFinalized = false;
 
 public:
-    void beginBlock(uint32_t blockHeight);
+    [[nodiscard]] auto beginBlock(uint32_t blockHeight) -> BlockData&;
+
     void addChange(int64_t satoshi, uint32_t blockHeight);
     void finalizeBlock();
     [[nodiscard]] auto encode() const -> std::string;
@@ -79,7 +129,7 @@ public:
     [[nodiscard]] auto operator==(ChangesInBlock const& other) const noexcept -> bool;
     [[nodiscard]] auto operator!=(ChangesInBlock const& other) const noexcept -> bool;
 
-    [[nodiscard]] auto blockHeight() const noexcept -> uint32_t;
+    [[nodiscard]] auto blockData() const noexcept -> BlockData const&;
     [[nodiscard]] auto changeAtBlockheights() const noexcept -> std::vector<ChangeAtBlockheight> const&;
 
     // decodes the whole changesInBlock, and returns also pointer to the next block.
