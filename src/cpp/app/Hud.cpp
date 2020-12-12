@@ -10,6 +10,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include <cstring>
+#include <map>
 
 namespace {
 
@@ -161,12 +162,36 @@ class HudImpl : public Hud {
     Cfg mCfg;
     cv::Mat mMat{};
     SatoshiBlockheightToPixel mSatoshiBlockheightToPixel;
+    std::map<uint32_t, std::string> mHeightToTimestring{};
 
 public:
-    explicit HudImpl(Cfg const& cfg)
+    explicit HudImpl(Cfg const& cfg, util::Mmap const& mmappedFile)
         : mCfg(cfg)
         , mMat(cfg.imageHeight, cfg.imageWidth, CV_8UC3)
-        , mSatoshiBlockheightToPixel(cfg) {}
+        , mSatoshiBlockheightToPixel(cfg) {
+
+        // iterate all blocks until end, store the time of each 100k block.
+        if (!mmappedFile.is_open()) {
+            throw std::runtime_error("file not open");
+        }
+
+        auto const* ptr = mmappedFile.begin();
+        auto const* end = mmappedFile.end();
+
+        auto blockHeight = uint32_t();
+        auto nextTargetBlockHeight = uint32_t();
+        while (ptr != end) {
+            if (blockHeight == nextTargetBlockHeight) {
+                auto [cib, newPtr] = buv::ChangesInBlock::decode(ptr);
+                nextTargetBlockHeight += 100000;
+                ptr = newPtr;
+                auto formattedTime = date::format("%F", UnixClockSeconds(std::chrono::seconds(cib.blockData().time)));
+                mHeightToTimestring[cib.blockData().blockHeight] = formattedTime;
+            } else {
+                std::tie(blockHeight, ptr) = buv::ChangesInBlock::skip(ptr);
+            }
+        }
+    }
 
     void writeAmount(size_t x,
                      size_t y,
@@ -297,13 +322,23 @@ public:
             // only print text when distance to current line is large enough, so it's not overwritten
             auto distFromMid = std::abs(static_cast<int>(x) - static_cast<int>(legendX));
             if (showText && distFromMid > 60) {
-                write(mMat, legendX, offset + len + 17, h == 0 ? Origin::top_left : Origin::top_center, "{}k", h / 1000);
+                write(mMat,
+                      legendX,
+                      offset + len + 17,
+                      h == 0 ? Origin::top_left : Origin::top_center,
+                      "{}{}",
+                      h / 1000,
+                      h == 0 ? "" : "k");
             }
             if (showText && distFromMid > 190) {
                 // auto formattedTime = date::format("%F", std::chrono::floor<std::chrono::seconds>(info.blockHeaders[h].time));
-                auto formattedTime = std::string("TODOFIXME");
-                write(
-                    mMat, legendX, offset + len + 30 + 17, h == 0 ? Origin::top_left : Origin::top_center, formattedTime.c_str());
+                if (auto it = mHeightToTimestring.find(h); it != mHeightToTimestring.end()) {
+                    write(mMat,
+                          legendX,
+                          offset + len + 30 + 17,
+                          h == 0 ? Origin::top_left : Origin::top_center,
+                          it->second.c_str());
+                }
             }
         }
 
@@ -343,8 +378,8 @@ public:
     }
 };
 
-auto Hud::create(Cfg const& cfg) -> std::unique_ptr<Hud> {
-    return std::make_unique<HudImpl>(cfg);
+auto Hud::create(Cfg const& cfg, util::Mmap const& mmappedFile) -> std::unique_ptr<Hud> {
+    return std::make_unique<HudImpl>(cfg, mmappedFile);
 }
 
 } // namespace buv

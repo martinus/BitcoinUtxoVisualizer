@@ -2,6 +2,7 @@
 
 #include <app/BlockEncoder.h>
 #include <app/Cfg.h>
+#include <util/Mmap.h>
 
 #include <memory>
 
@@ -10,7 +11,7 @@ namespace buv {
 // head up display
 class Hud {
 public:
-    static auto create(Cfg const& cfg) -> std::unique_ptr<Hud>;
+    static auto create(Cfg const& cfg, util::Mmap const& mmappedFile) -> std::unique_ptr<Hud>;
 
     Hud();
     virtual ~Hud();

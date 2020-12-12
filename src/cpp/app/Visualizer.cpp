@@ -49,7 +49,7 @@ TEST_CASE("visualizer" * doctest::skip()) {
     auto density = buv::Density(cfg);
     auto throttler = util::ThrottlePeriodic(1000ms);
 
-    auto hud = buv::Hud::create(cfg);
+    auto hud = buv::Hud::create(cfg, file);
     auto socketStream = buv::SocketStream::create(cfg.connectionIpAddr.c_str(), cfg.connectionSocket);
 
     auto lastCib = buv::forEachChange(file, [&](buv::ChangesInBlock const& cib) {
