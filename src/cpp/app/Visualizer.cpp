@@ -83,10 +83,16 @@ TEST_CASE("visualizer" * doctest::skip()) {
     });
 
     // fade out & keep last image for 1 minute
-    for (uint32_t i = 0; i < 60 * 60; ++i) {
+    auto numFadeoutFrames = uint32_t(60 * 60);
+    for (uint32_t i = 0; i < numFadeoutFrames; ++i) {
         density.fadeOut(lastCib.blockData().blockHeight + i + 1, [&](uint8_t const* data) {
             hud->draw(data, lastCib);
             socketStream->write(hud->data(), hud->size());
+
+            if (i == numFadeoutFrames - 1) {
+                auto imgFileName = fmt::format("img_{:07}.ppm", lastCib.blockData().blockHeight);
+                saveImagePPM(cfg.imageWidth, cfg.imageHeight, hud->data(), imgFileName);
+            }
         });
     }
 }
