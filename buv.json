@@ -15,8 +15,9 @@
     "maxBlockHeight": 660350,
     
     "skipBlocks": 0,
+    "repeatLastBlockTimes": 100,
 
-    "startShowAtBlockHeight": 100000,
+    "startShowAtBlockHeight": 172000,
     "connectionIpAddr": "127.0.0.1",
     "connectionSocket": 12987,
     "colorMap": "turbo",

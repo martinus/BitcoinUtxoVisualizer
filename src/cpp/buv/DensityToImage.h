@@ -40,6 +40,7 @@ public:
         , mHeight(height)
         , mColorBackground(colorBackground) {
 
+        LOG("Creating density image {}x{}", width, height);
         // fill with lowest colormap's value
         for (size_t i = 0; i < width * height; ++i) {
             rgb(i, mColorBackground.data());

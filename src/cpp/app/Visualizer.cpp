@@ -40,19 +40,19 @@ void saveImagePPM(size_t width, size_t height, uint8_t const* data, std::string 
 TEST_CASE("visualizer" * doctest::skip()) {
     auto cfg = buv::parseCfg(util::args::get("-cfg").value());
 
-    auto density = buv::Density(cfg);
-    auto throttler = util::ThrottlePeriodic(1000ms);
-
     LOG("mmapping '{}', this could take a while...", cfg.blkFile);
     auto file = util::Mmap(cfg.blkFile);
     auto numBlocks = buv::numBlocks(file);
     LOG("{} blocks, overwritting cfg with that setting", numBlocks);
     cfg.maxBlockHeight = numBlocks - 1;
 
+    auto density = buv::Density(cfg);
+    auto throttler = util::ThrottlePeriodic(1000ms);
+
     auto hud = buv::Hud::create(cfg);
     auto socketStream = buv::SocketStream::create(cfg.connectionIpAddr.c_str(), cfg.connectionSocket);
 
-    buv::forEachChange(file, [&](buv::ChangesInBlock const& cib) {
+    auto lastCib = buv::forEachChange(file, [&](buv::ChangesInBlock const& cib) {
         auto blockHeight = cib.blockData().blockHeight;
         LOGIF(throttler(), "block {}, {} changes", blockHeight, cib.changeAtBlockheights().size());
 
@@ -82,4 +82,20 @@ TEST_CASE("visualizer" * doctest::skip()) {
 
         return true;
     });
+
+    // fade out - does not work yet :-(
+#if 0
+    auto cib = buv::ChangesInBlock();
+    auto& bd = cib.beginBlock(lastCib.blockData().blockHeight);
+    bd = lastCib.blockData();
+    cib.finalizeBlock();
+
+    for (size_t i = 1; i < cfg.repeatLastBlockTimes + 1; ++i) {
+        density.begin_block(cib.blockData().blockHeight + i);
+        density.end_block(cib.blockData().blockHeight + 1, [&](uint8_t const* data) {
+            hud->draw(data, cib);
+            socketStream->write(hud->data(), hud->size());
+        });
+    }
+#endif
 }

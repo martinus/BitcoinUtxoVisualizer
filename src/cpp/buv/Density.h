@@ -31,7 +31,9 @@ public:
               cfg.imageWidth, cfg.imageHeight, cfg.colorUpperValueLimit, ColorMap::create(cfg.colorMap), cfg.colorBackgroundRGB)
         , m_current_block_height(0)
         , m_prev_block_height(-1)
-        , m_prev_amount(-1) {}
+        , m_prev_amount(-1) {
+        LOG("Image {}x{}", cfg.imageWidth, cfg.imageHeight);
+    }
 
     void begin_block(uint32_t block_height) {
         m_current_block_height = block_height;

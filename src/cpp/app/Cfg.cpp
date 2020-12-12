@@ -66,6 +66,7 @@ auto parseCfg(std::filesystem::path const& cfgFile) -> Cfg {
     cfg.maxBlockHeight = load<uint64_t>(data, "maxBlockHeight");
     cfg.startShowAtBlockHeight = load<uint64_t>(data, "startShowAtBlockHeight");
     cfg.skipBlocks = load<uint64_t>(data, "skipBlocks");
+    cfg.repeatLastBlockTimes = load<uint64_t>(data, "repeatLastBlockTimes");
     cfg.connectionIpAddr = std::string(load<std::string_view>(data, "connectionIpAddr"));
     cfg.connectionSocket = load<uint64_t>(data, "connectionSocket");
     cfg.colorUpperValueLimit = load<uint64_t>(data, "colorUpperValueLimit");

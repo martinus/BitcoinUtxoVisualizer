@@ -8,7 +8,7 @@
 namespace buv {
 
 template <typename Op>
-void forEachChange(util::Mmap const& mmappedFile, Op op) {
+auto forEachChange(util::Mmap const& mmappedFile, Op op) -> buv::ChangesInBlock {
     if (!mmappedFile.is_open()) {
         throw std::runtime_error("file not open");
     }
@@ -21,9 +21,11 @@ void forEachChange(util::Mmap const& mmappedFile, Op op) {
         std::tie(cib, ptr) = buv::ChangesInBlock::decode(std::move(cib), ptr);
         // NOLINTNEXTLINE(bugprone-use-after-move,hicpp-invalid-access-moved)
         if (!op(cib)) {
-            break;
+            return cib;
         }
     }
+
+    return cib;
 }
 
 [[nodiscard]] inline auto numBlocks(util::Mmap const& mmappedFile) -> size_t {

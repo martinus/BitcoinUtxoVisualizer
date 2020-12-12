@@ -3,6 +3,7 @@
 #include <app/Cfg.h>
 #include <buv/LinearFunction.h>
 #include <buv/truncate.h>
+#include <util/log.h>
 
 #include <cmath>
 
@@ -23,7 +24,10 @@ public:
                    0,
                    static_cast<double>(cfg.maxBlockHeight),
                    static_cast<double>(cfg.graphRect.w))
-        , mRect(cfg.graphRect) {}
+        , mRect(cfg.graphRect) {
+        LOG("Satoshi from {}-{} -> {}-{}", cfg.maxSatoshi, cfg.minSatoshi, 0.0, static_cast<double>(cfg.graphRect.h));
+        LOG("Height from {}-{} -> {}-{}", cfg.minBlockHeight, cfg.maxBlockHeight, 0, static_cast<double>(cfg.graphRect.w));
+    }
 
     [[nodiscard]] inline auto satoshiToPixelHeight(int64_t satoshi) const -> size_t {
         auto const famount = satoshi >= 0 ? satoshi : -satoshi;

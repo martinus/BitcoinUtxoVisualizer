@@ -29,6 +29,7 @@ struct Cfg {
 
     uint32_t startShowAtBlockHeight{};
     uint32_t skipBlocks{1};
+    uint32_t repeatLastBlockTimes{0};
     std::string connectionIpAddr = "127.0.0.1";
     uint16_t connectionSocket = 12987;
     std::string colorMap = "viridis";
