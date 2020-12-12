@@ -39,6 +39,7 @@ public:
         m_current_block_height = block_height;
     }
 
+    // adds/removes 1 at the correct density. Insert that pixel into m_current_block_pixels for quick processing in end_block.
     void change(uint32_t block_height, int64_t amount) {
         if (amount == 0) {
             return;
@@ -77,6 +78,7 @@ public:
             return;
         }
 
+        // update only the colors of the pixels that actually need updating
         for (auto const pixel_idx : m_current_block_pixels) {
             m_density_to_image.update(pixel_idx, m_data[pixel_idx]);
         }
@@ -118,6 +120,26 @@ public:
                 }
             }
         }
+
+        fadeOut(block_height, op);
+
+        // save_image_ppm(toi, fname);
+        // m_pixel_set.clear();
+        //}
+
+        m_current_block_pixels.clear();
+    }
+
+    // saves current status of the image as a PPM file
+    void save_image_ppm(std::string const& filename) const {
+        // see http://netpbm.sourceforge.net/doc/ppm.html
+        std::ofstream fout(filename, std::ios::binary);
+        fout << "P6\n" << mCfg.imageWidth << " " << mCfg.imageHeight << "\n" << 255 << "\n" << m_density_to_image;
+    }
+
+    template <typename Op>
+    void fadeOut(uint32_t block_height, Op op) {
+        // remove all pixels older than max age
         m_pixel_set_with_history.age(block_height);
 
         // temporarily set all updated pixels to white
@@ -148,19 +170,6 @@ public:
             m_density_to_image.rgb(blockheight_pixelidx.pixel_idx, rgb_data);
             rgb_data += 3;
         }
-
-        // save_image_ppm(toi, fname);
-        // m_pixel_set.clear();
-        //}
-
-        m_current_block_pixels.clear();
-    }
-
-    // saves current status of the image as a PPM file
-    void save_image_ppm(std::string const& filename) const {
-        // see http://netpbm.sourceforge.net/doc/ppm.html
-        std::ofstream fout(filename, std::ios::binary);
-        fout << "P6\n" << mCfg.imageWidth << " " << mCfg.imageHeight << "\n" << 255 << "\n" << m_density_to_image;
     }
 
     ~Density() {

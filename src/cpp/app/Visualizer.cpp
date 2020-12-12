@@ -82,19 +82,11 @@ TEST_CASE("visualizer" * doctest::skip()) {
         return true;
     });
 
-    // fade out - does not work yet :-(
-#if 0
-    auto cib = buv::ChangesInBlock();
-    auto& bd = cib.beginBlock(lastCib.blockData().blockHeight);
-    bd = lastCib.blockData();
-    cib.finalizeBlock();
-
-    for (size_t i = 1; i < cfg.repeatLastBlockTimes + 1; ++i) {
-        density.begin_block(cib.blockData().blockHeight + i);
-        density.end_block(cib.blockData().blockHeight + 1, [&](uint8_t const* data) {
-            hud->draw(data, cib);
+    // fade out & keep last image for 1 minute
+    for (uint32_t i = 0; i < 60 * 60; ++i) {
+        density.fadeOut(lastCib.blockData().blockHeight + i + 1, [&](uint8_t const* data) {
+            hud->draw(data, lastCib);
             socketStream->write(hud->data(), hud->size());
         });
     }
-#endif
 }
