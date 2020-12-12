@@ -114,6 +114,14 @@ auto ChangesInBlock::encode() const -> std::string {
     return mChangeAtBlockheights;
 }
 
+[[nodiscard]] auto ChangesInBlock::numUtxoDestroyed() const noexcept -> size_t {
+    return mNumUtxoDestroyed;
+}
+
+[[nodiscard]] auto ChangesInBlock::numUtxoCreated() const noexcept -> size_t {
+    return mNumUtxoCreated;
+}
+
 namespace {
 
 // parse the header and returns
@@ -191,6 +199,8 @@ auto ChangesInBlock::decode(ChangesInBlock&& reusableChanges, char const* ptr) -
     reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, tmpBlockHeight);
 
     auto blockHeight = int64_t(tmpBlockHeight);
+    reusableChanges.mNumUtxoCreated = 0;
+    reusableChanges.mNumUtxoDestroyed = 0;
 
     while (payloadPtr < endPtr) {
         auto diffSatoshi = uint64_t();
@@ -204,8 +214,10 @@ auto ChangesInBlock::decode(ChangesInBlock&& reusableChanges, char const* ptr) -
             util::VarInt::decode<int64_t>(diffBlockheight, payloadPtr);
             blockHeight += diffBlockheight;
             reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, blockHeight);
+            ++reusableChanges.mNumUtxoDestroyed;
         } else {
             reusableChanges.mChangeAtBlockheights.emplace_back(satoshi, header.blockHeight);
+            ++reusableChanges.mNumUtxoCreated;
         }
     }
 

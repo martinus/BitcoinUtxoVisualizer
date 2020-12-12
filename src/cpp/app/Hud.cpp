@@ -250,7 +250,7 @@ public:
         write(mMat, column2x, y, Origin::top_right, "{} B", blockHeader.size);
         y += lineSpacing;
 
-        write(mMat, column1x, y, Origin::top_left, "Weight units");
+        write(mMat, column1x, y, Origin::top_left, "Weight Units");
         write(mMat, column2x, y, Origin::top_right, "{} WU", blockHeader.weight);
         y += lineSpacing;
 
@@ -258,15 +258,23 @@ public:
         write(mMat, column2x, y, Origin::top_right, "{}", blockHeader.nTx);
         y += lineSpacing;
 
+        write(mMat, column1x, y, Origin::top_left, "Number of UTXO created");
+        write(mMat, column2x, y, Origin::top_right, "{}", cib.numUtxoCreated());
+        y += lineSpacing;
+
+        write(mMat, column1x, y, Origin::top_left, "Number of UTXO destroyed");
+        write(mMat, column2x, y, Origin::top_right, "{}", cib.numUtxoDestroyed());
+        y += lineSpacing;
+
         write(mMat, column1x, y, Origin::top_left, "Difficulty");
         write(mMat, column2x, y, Origin::top_right, "{}", blockHeader.difficulty());
         y += lineSpacing;
 
-        write(mMat, column1x, y, Origin::top_left, "Merkle root");
+        write(mMat, column1x, y, Origin::top_left, "Merkle Root");
         writeMono(mMat, column2x, y, Origin::top_right, util::toHex(blockHeader.merkleRoot).c_str());
         y += lineSpacing;
 
-        write(mMat, column1x, y, Origin::top_left, "chainwork");
+        write(mMat, column1x, y, Origin::top_left, "Chainwork");
         writeMono(mMat, column2x, y, Origin::top_right, util::toHex(blockHeader.chainWork).c_str());
         y += lineSpacing;
 

@@ -131,6 +131,9 @@ class ChangesInBlock {
     BlockData mBlockData{};
     bool mIsFinalized = false;
 
+    size_t mNumUtxoDestroyed{};
+    size_t mNumUtxoCreated{};
+
 public:
     [[nodiscard]] auto beginBlock(uint32_t blockHeight) -> BlockData&;
 
@@ -143,6 +146,8 @@ public:
 
     [[nodiscard]] auto blockData() const noexcept -> BlockData const&;
     [[nodiscard]] auto changeAtBlockheights() const noexcept -> std::vector<ChangeAtBlockheight> const&;
+    [[nodiscard]] auto numUtxoDestroyed() const noexcept -> size_t;
+    [[nodiscard]] auto numUtxoCreated() const noexcept -> size_t;
 
     // decodes the whole changesInBlock, and returns also pointer to the next block.
     [[nodiscard]] static auto decode(char const* ptr) -> std::pair<ChangesInBlock, char const*>;
