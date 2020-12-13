@@ -8,28 +8,34 @@ The output looks like this (click for high resolution 4k image):
 
 # Installation
 
-```
-# fetch
-git clone --recurse-submodules https://github.com/martinus/BitcoinUtxoVisualizer.git
+**WARNING**: Generating such video is a time & resource intensive task, as Bitcoin's database is continuously growing.
 
-# compile
-mkdir BitcoinUtxoVisualizer/build
-cd BitcoinUtxoVisualizer/build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make
+This currently only works in Linux. Prerequsists are a C++ compiler `g++` (or, my prefered choice, `clang++`), and CMake.
 
-# run all tests
+
+1. fetch
+   ```
+   git clone --recurse-submodules https://github.com/martinus/BitcoinUtxoVisualizer.git
+   ```
+1. compile
+   ```
+   mkdir BitcoinUtxoVisualizer/build
+   cd BitcoinUtxoVisualizer/build
+   cmake -DCMAKE_BUILD_TYPE=Release ..
+   make -j12
+   ```
+1. Run all tests, should print `SUCCESS!`
+   ```
+   ./buv
+    ```
 
 
 # How To Generate a UTXO Movie
 
-**WARNING**: Generating such a video is a time and resource intensive task, as Bitcoin's database is continuously growing.
 
+This is a 3 step process:
 
-
-Having said that, generating a video is a 3 step process:
-
-## Bitcoin Core
+## 1. Bitcoin Core
 
 1. Have a fully synced [Bitcoin Core](https://bitcoin.org/en/bitcoin-core/) node running locally.
 1. Make sure to enable transaction index by adding `txindex=1` to `bitcoin.conf`.
@@ -48,40 +54,52 @@ Having said that, generating a video is a 3 step process:
    rpcauth=martinus:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
 
-## Preprocess UTXO Data
+## 2. Preprocess UTXO Data
 
-
-
-Once Bitcoin Core is fully synced and RPC is enabled, you can preprocess the UTXO database. This fetches all blocks with full transaction data from bitcoin core, extracts UTXO data, and writes a compact data file:
+Once Bitcoin Core is fully synced and RPC is enabled, you can preprocess the UTXO database. This fetches all blocks with full transaction data from bitcoin core, extracts UTXO data, and writes a compact data file. First, configure by editing `buv.json`. For this step, you only need to update `bitcoinRpcUrl` and the output `blkFile`:
 
 ```
+"bitcoinRpcUrl": "http://127.0.0.1:8332",
+"blkFile": "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1",
+```
+
+The output `blkFile` will be ~7.5GB large (as of Block 660,000). It contains block information & all satoshi amounts that were added or removed for each block. The format is tuned to be very compact and very fast to parse.
+
+```
+./buv -ns -tc=utxo_to_change -cfg=../buv.json
+```
+
+On my computer this takes about 1 1/2 hours, saturates 12 cores, and takes ~6.5GB of RAM. I have spent a long time to speed this up, initially this took 4 days and >30GB of RAM.
 
 
+## 3. Generate UTXO Video
 
-Parses the whole blockchain with the use of 
-[Bitcoin's REST interface](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md).
+After generating the `blkFile`, this file can be converted into an image stream that is directly piped into `ffmpeg` to generates a video. Preview is possible with `ffplay`.
 
-It can be used to generate a video of the evolution of the UTXO.
+The configuration file `buv.json` has several options to configure the output.
 
-The most recent (and largest) video that I've done is this: https://www.youtube.com/watch?v=sT_SOEc_U_A
+### Generate Preview
 
-It also flashes the transactions of the latest block as white dots (so basically the UTXO's from the past that are removed)
+To watch a preview, I usually update `buv.json` to start at a reasonably late block:
+```
+"startShowAtBlockHeight": 200000,
+```
 
-The basic workflow is like this:
-
-1. Make sure [bitcoind](https://bitcoin.org/en/bitcoin-core/) is running, with RPC enabled, and with `txindex=1` enabled. I have these settings in my `bitcoin.conf`:
+1. In one window, start `ffplay`:
    ```
-   server=1
-   rest=1
-   rpcport=8332
-   txindex=1
-   dbcache=8000
-   # generate username & password with 'bitcoin/share/rpcauth.py <username> -'
-   rpcauth=martinus:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   ffplay -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen" 
    ```
 
-1. First, fetch data from bitcoin full node (using the JSON interface), and preprocess this into a binary data dump. This is done with `utxo_to_change.rb`. It is a timeconsuming process. Could probably be optimized by using a different API or directly operating on the binary data.
+1. In another window, start `buv` to connect to `ffplay` and pipe its output into it.
+   ```
+   ./buv -ns -tc=visualizer -cfg=../buv.json
+   ```
+   Once `buv` has processed up to block 200000 ffplay will pop up and show a life preview.
 
-1. After generating the binary dump, an C++ generator (BitcoinVisualizer) parses the dump and generates images that can be directly piped into `ffmpeg` which generates a video. Most of the magic is done in the class `Density`. This creates a socket connection, and dumps each image it generates from the binary data into the socket for `ffmpeg` to process. Note that currently it's hardcoded to stop at block 200000. Instead of `ffmpeg` you can also dump the images into `ffplay` to directly visualize the output.
+If you are happy with what you see, instead of `ffplay` use `ffmpeg` and start `buv` again:
 
-Currently the C++ code is a bit platform specific unfortunately, and not well documented.
+```
+ffmpeg -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen" -c:v libx264 -profile:v high -bf 2 -g 30 -preset slower -crf 24 -pix_fmt yuv420p -movflags faststart out.mp4
+```
+
+For 660000 this will create a ~3 hour 4K x 60Hz video, where each frame represents a single block. The video is about 21GB large.

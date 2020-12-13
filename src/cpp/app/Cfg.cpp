@@ -49,7 +49,6 @@ auto parseCfg(std::filesystem::path const& cfgFile) -> Cfg {
     auto cfg = Cfg();
     LOG("Loading config file {}", cfgFile.string());
     cfg.bitcoinRpcUrl = std::string(load<std::string_view>(data, "bitcoinRpcUrl"));
-    cfg.blockHeadersFile = std::string(load<std::string_view>(data, "blockHeadersFile"));
     cfg.blkFile = std::string(load<std::string_view>(data, "blkFile"));
     cfg.imageWidth = load<uint64_t>(data, "imageWidth");
     cfg.imageHeight = load<uint64_t>(data, "imageHeight");

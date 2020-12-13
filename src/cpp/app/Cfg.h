@@ -15,7 +15,6 @@ struct Rect {
 
 struct Cfg {
     std::string bitcoinRpcUrl{};
-    std::string blockHeadersFile{};
 
     std::string blkFile{};
     size_t imageWidth{};
