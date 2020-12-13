@@ -1,5 +1,15 @@
 # BitcoinUtxoVisualizer
 
+BitcoinUtxoVisualizer can generated videos of the evolution of the evolution of Bitcoin's UTXO (Unspent Transaction Outputs).
+
+The output looks like this (click for large image):
+
+[![Bitcoin UTXO still image](doc/img_0661045_small.jpg)](doc/img_0661045_compressed.png)
+
+This is a time resource intensive task, as Bitcon's database is getting larger and larger.
+
+
+
 Parses the whole blockchain with the use of 
 [Bitcoin's REST interface](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md).
 
