@@ -325,13 +325,10 @@ public:
         for (uint32_t h = 0; h < mNumBlocks; h += 10000) {
             auto legendX = mSatoshiBlockheightToPixel.blockheightToPixelWidth(h);
             auto len = 5;
-            bool showText = false;
             if (h % 100000 == 0) {
                 len *= 2;
-                showText = true;
             }
             if (h == mNumBlocks - 1) {
-                showText = true;
             }
             cv::line(mMat, cv::Point(legendX, offset), cv::Point(legendX, offset + len), cv::Scalar(255, 255, 255));
 

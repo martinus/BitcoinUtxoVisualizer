@@ -1,12 +1,60 @@
 # BitcoinUtxoVisualizer
 
-BitcoinUtxoVisualizer can generated videos of the evolution of the evolution of Bitcoin's UTXO (Unspent Transaction Outputs).
+BitcoinUtxoVisualizer (short `buv`) can generated videos of the evolution of the evolution of Bitcoin's [UTXO (Unspent Transaction Outputs)](https://medium.com/bitbees/what-the-heck-is-utxo-ca68f2651819).
 
 The output looks like this (click for high resolution 4k image):
 
 [![Bitcoin UTXO still image](doc/img_0661045_small.jpg)](https://raw.githubusercontent.com/martinus/BitcoinUtxoVisualizer/master/doc/img_0661045_compressed.png)
 
-This is a time resource intensive task, as Bitcon's database is getting larger and larger.
+# Installation
+
+```
+# fetch
+git clone --recurse-submodules https://github.com/martinus/BitcoinUtxoVisualizer.git
+
+# compile
+mkdir BitcoinUtxoVisualizer/build
+cd BitcoinUtxoVisualizer/build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+
+# run all tests
+
+
+# How To Generate a UTXO Movie
+
+**WARNING**: Generating such a video is a time and resource intensive task, as Bitcoin's database is continuously growing.
+
+
+
+Having said that, generating a video is a 3 step process:
+
+## Bitcoin Core
+
+1. Have a fully synced [Bitcoin Core](https://bitcoin.org/en/bitcoin-core/) node running locally.
+1. Make sure to enable transaction index by adding `txindex=1` to `bitcoin.conf`.
+1. `buv` makes heavy use of Bitcoin Core's JSON RPC, so you need to enable this as well. Also, make sure the
+   RPCs have enough threads for processing. To sum this up, I have these settings in my `bitcoin.conf` file:
+   ```
+   server=1
+   rest=1
+   rpcport=8332
+   rpcthreads=32
+   rpcworkqueue=64
+   txindex=1
+   dbcache=2000
+
+   # generate username & password with 'bitcoin/share/rpcauth.py <username> -'
+   rpcauth=martinus:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+
+## Preprocess UTXO Data
+
+
+
+Once Bitcoin Core is fully synced and RPC is enabled, you can preprocess the UTXO database. This fetches all blocks with full transaction data from bitcoin core, extracts UTXO data, and writes a compact data file:
+
+```
 
 
 

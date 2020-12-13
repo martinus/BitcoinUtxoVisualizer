@@ -25,7 +25,6 @@ void findBestHighlightColor(buv::ColorMapType colorType) {
     auto multiplier = rng() | 1U;
 
     auto bestClosestDist = int64_t();
-    auto bestRgb = uint32_t();
     for (uint32_t i = 0; i <= 0xFFFFFF; ++i) {
         // multiply with a random odd constant so we a more or less random rgb values. We still iterate all values.
         auto rgbVal = i * multiplier;
@@ -43,7 +42,6 @@ void findBestHighlightColor(buv::ColorMapType colorType) {
         }
 
         if (currentClosestDist > bestClosestDist) {
-            bestRgb = rgbVal;
             bestClosestDist = currentClosestDist;
 
             LOG("{:8.2f} distance for RGB({:3}, {:3}, {:3}) colormap {}",

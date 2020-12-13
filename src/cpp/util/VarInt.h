@@ -54,50 +54,46 @@ template <typename UT>
     // byte 5
     b = *ptr++;
     val |= (b & 127) << (7 * 4);
-    if constexpr (sizeof(UT) == 4) {
-        return val;
-    }
 
-    if constexpr (sizeof(UT) <= 4) {
+    if constexpr (sizeof(UT) > 4) {
         // can't have more than 5 bytes for uint32_t
-        return val;
+
+        if (b < 128) {
+            return val;
+        };
+
+        // byte 6
+        b = *ptr++;
+        val |= (b & 127) << (7 * 5);
+        if (b < 128) {
+            return val;
+        };
+
+        // byte 7
+        b = *ptr++;
+        val |= (b & 127) << (7 * 6);
+        if (b < 128) {
+            return val;
+        };
+
+        // byte 8
+        b = *ptr++;
+        val |= (b & 127) << (7 * 7);
+        if (b < 128) {
+            return val;
+        };
+
+        // byte 9
+        b = *ptr++;
+        val |= (b & 127) << (7 * 8);
+        if (b < 128) {
+            return val;
+        };
+
+        // byte 10
+        b = *ptr++;
+        val |= (b & 127) << (7 * 9);
     }
-
-    if (b < 128) {
-        return val;
-    };
-
-    // byte 6
-    b = *ptr++;
-    val |= (b & 127) << (7 * 5);
-    if (b < 128) {
-        return val;
-    };
-
-    // byte 7
-    b = *ptr++;
-    val |= (b & 127) << (7 * 6);
-    if (b < 128) {
-        return val;
-    };
-
-    // byte 8
-    b = *ptr++;
-    val |= (b & 127) << (7 * 7);
-    if (b < 128) {
-        return val;
-    };
-
-    // byte 9
-    b = *ptr++;
-    val |= (b & 127) << (7 * 8);
-    if (b < 128) {
-        return val;
-    };
-
-    // byte 10
-    b = *ptr++;
-    val |= (b & 127) << (7 * 9);
     return val;
 }
 
