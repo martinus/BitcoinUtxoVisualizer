@@ -1,11 +1,78 @@
 #include "Utxo.h"
 
+#include <util/writeBinary.h>
+
 #include <fmt/format.h>
 #include <robin_hood.h>
 
+#include <fstream>
 #include <map>
 #include <string>
 #include <string_view>
+
+namespace buv {
+
+namespace {
+
+// first creates a .tmp file, then renames when finished.
+auto dump(uint32_t blockHeight, Utxo const& utxo, std::filesystem::path const& filename) -> size_t {
+    auto fout = std::ofstream(filename, std::ios::binary);
+    if (!fout.is_open()) {
+        throw std::runtime_error("could not open file for writing UTXO");
+    }
+
+    fout.write("UTXO0", 4);
+    util::writeBinary<4>(blockHeight, fout);
+    util::writeBinary<8>(utxo.map().size(), fout);
+    auto numVouts = size_t();
+    for (auto const& kv : utxo.map()) {
+        // key
+        util::writeArray<8>(kv.first, fout);
+
+        // value
+        auto const* chunk = kv.second.chunk();
+        while (chunk != nullptr) {
+            util::writeBinary<8>(chunk->voutSatoshi().data(), fout);
+            chunk = chunk->next();
+            ++numVouts;
+        }
+        util::writeBinary<8>(VoutSatoshi().data(), fout);
+    }
+
+    return numVouts;
+}
+
+} // namespace
+
+// first creates a .tmp file, then renames when finished.
+void serialize(uint32_t blockHeight, Utxo const& utxo, std::filesystem::path const& filename) {
+    auto tmpFilename = filename;
+    tmpFilename += ".tmp";
+    LOG("Writing UTXO to {}...", tmpFilename.string());
+    auto n = dump(blockHeight, utxo, tmpFilename.string());
+    LOG("Wrote {} vouts", n);
+    std::filesystem::rename(tmpFilename.string(), filename.string());
+    LOG("Renamed {} -> {}", tmpFilename.string(), filename.string());
+}
+
+[[nodiscard]] auto load(std::filesystem::path const& filename) -> std::pair<uint32_t, Utxo> {
+    auto fin = std::ifstream(filename, std::ios::binary);
+    if (!fin.is_open()) {
+        throw std::runtime_error("could not open file for reading UTXO");
+    }
+
+    auto header = util::readBinary<uint32_t>(fin);
+    if (header != 0x1) {
+        throw std::runtime_error(fmt::format("Got {:x} but expected {:x}", header, 0x1));
+    }
+
+    auto blockHeight = util::readBinary<uint32_t>(fin);
+
+    auto utxo = Utxo();
+    return std::make_pair(blockHeight, std::move(utxo));
+}
+
+} // namespace buv
 
 namespace fmt {
 

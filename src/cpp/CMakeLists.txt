@@ -17,6 +17,7 @@ target_sources_local(${PROJECT_NAME}
         app/load_all_block_headers.cpp
         app/parse_block.cpp
         app/show_block_changes.cpp
+        app/show_pixels_blocks.cpp
         app/utxo_to_change.cpp
         app/Utxo.cpp
         app/Visualizer.cpp

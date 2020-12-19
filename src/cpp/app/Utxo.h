@@ -6,6 +6,8 @@
 #include <fmt/core.h>
 #include <robin_hood.h>
 
+#include <filesystem>
+
 namespace buv {
 
 // Limiting to 8 bytes for now. There is a slim risk of collision, but otherwise it takes sooo much memory.
@@ -137,6 +139,11 @@ public:
         return mChunkStore;
     }
 };
+
+// Compact binary data serialization
+void serialize(uint32_t blockHeight, Utxo const& utxo, std::filesystem::path const& filename);
+
+[[nodiscard]] auto load(std::filesystem::path const& filename) -> std::pair<uint32_t, Utxo>;
 
 } // namespace buv
 

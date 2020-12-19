@@ -127,29 +127,25 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         [&](util::ResourceId resourceId, util::SequenceId /*sequenceId*/) {
             auto& res = resources[resourceId.count()];
             auto cib = integrateBlockData(res.blockData, *utxo);
-
-            if (throttler()) {
-                if (util::kbhit()) {
-                    getchar();
-                    LOG("{:10} height, {:10} bytes, {:10.3f} MB max RSS, utxo: {:d}",
-                        cib.blockData().blockHeight,
-                        res.jsonData.size(),
-                        util::maxRss() / 1048576.0,
-                        *utxo);
-                } else {
-                    LOG("{:10} height, {:10} bytes, {:10.3f} MB max RSS, utxo: {}",
-                        cib.blockData().blockHeight,
-                        res.jsonData.size(),
-                        util::maxRss() / 1048576.0,
-                        *utxo);
-                }
-            }
+            fout << cib.encode();
 
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)
             res.jsonData = std::string();
 
-            fout << cib.encode();
+            if (throttler()) {
+                if (util::kbhit()) {
+                    switch (std::getchar()) {
+                    case 'q':
+                        buv::serialize(cib.blockData().blockHeight, *utxo, "utxo.dat");
+                    }
+                } else {
+                    LOG("{:10} height {:10.3f} MB max RSS, utxo: {}",
+                        cib.blockData().blockHeight,
+                        util::maxRss() / 1048576.0,
+                        *utxo);
+                }
+            }
         });
 
     LOG("Done! utxo: {:d}", *utxo);

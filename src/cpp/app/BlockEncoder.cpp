@@ -43,7 +43,7 @@ auto ChangesInBlock::encode() const -> std::string {
     auto data = std::string();
 
     data += std::string_view("BLK\x02");
-    data.append(reinterpret_cast<char const*>(&mBlockData.blockHeight), sizeof(mBlockData.blockHeight));
+    util::writeBinary<4>(mBlockData.blockHeight, data);
 
     // skip 4 bytes, which will later contain the size of the remaining payload. This can be used to quickly skip to the next
     // block.

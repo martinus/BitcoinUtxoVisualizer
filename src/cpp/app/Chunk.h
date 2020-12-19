@@ -53,6 +53,11 @@ public:
     [[nodiscard]] constexpr auto isVout(uint16_t vout) const -> bool {
         return static_cast<uint16_t>(mVoutAndSatoshi) == vout;
     }
+
+    // internal data
+    [[nodiscard]] auto data() const -> uint64_t {
+        return mVoutAndSatoshi;
+    }
 };
 
 // Chunk contains multiple VoutSatoshi, and links to the next one.
