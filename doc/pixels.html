@@ -6,19 +6,34 @@
     <script src="https://unpkg.com/vue@next"></script>
 </head>
 
+<!-- https://ej2.syncfusion.com/vue/documentation/stock-chart/cross-hair/ -->
+
 <body>
-    <h1>Huh!</h1>
+    <h1>Bitcoin UTXO Analyzer</h1>
+
+    This is a very rough tool to help analyze the UTXO output. I hope somebody with actual javascript & HTML knowledge
+    can create a much better tool.
+
+    <div id="tooltip"
+        style="background-color: white; white-space: pre; font-family:'Courier New', Courier, monospace; z-index:1000; position:absolute;">
+        {{tooltip_text}}
+    </div>
+
+    <!-- https://stackoverflow.com/questions/14824747/overlay-html5-canvas-over-image -->
     <div id="utxo_image">
-        <img src="img_0661045_compressed.png" v-on:mousemove="mouseOver" />
+        <div v-on:mousemove="mouseOver" style="position:relative">
+            <img src="img_0661045_compressed.png"
+                style="width:3840px; height:2160px; position:absolute; top:0px; left:0px; z-index: 0;" />
+            <canvas width="3840" height="2160" id="canvas" class="coveringCanvas"
+                style="position:absolute; top:0px; left:0px; background-color: rgba(0,0,0,.1); z-index: 1;"></canvas>
+        </div>
     </div>
 
     <script>
+        var lastX = 0;
+        var lastY = 0;
         const Handler = {
-            data() {
-                return {
-                    counter: 0
-                }
-            },
+
             methods: {
                 mouseOver(event) {
                     // data from buv.json - required to calculate a pixel's range
@@ -28,8 +43,12 @@
                     maxSatoshi = 1000000000000;
 
                     // get pixel
-                    var imgX = event.pageX - event.target.x;
-                    var imgY = event.pageY - event.target.y;
+                    var imgX = event.layerX;
+                    var imgY = event.layerY;
+
+                    //console.log("x=" + plotX + ", y=" + plotY + " blockHeight=" + blockHeightLow + " - " + blockHeightHigh + ", satoshi=" + satoshiLow + " - " + satoshiHigh);
+                    //console.log(event)
+                    console.log("imgX=" + event.pageX + ", imgY=" + event.pageY);
 
                     // check where in the plot we are
                     var plotX = imgX - graphRect[0];
@@ -68,7 +87,53 @@
                     var satoshiHigh = Math.ceil(Math.exp((plotY - d) / k));
                     var satoshiLow = Math.floor(Math.exp((plotY + 1 - d) / k));
 
-                    console.log("x=" + plotX + ", y=" + plotY + " blockHeight=" + blockHeightLow + " - " + blockHeightHigh + ", satoshi=" + satoshiLow + " - " + satoshiHigh);
+                    tooltip = document.getElementById("tooltip");
+                    tooltip.style.left = (event.pageX - tooltip.clientWidth / 2) + "px";
+                    tooltip.style.top = (event.pageY + 20) + "px";
+
+                    // format satoshi
+                    satoshiUnit = "sat";
+                    satoshiDiv = 1.0;
+
+                    if (satoshiLow > 100_000_000_000) {
+                        satoshiUnit = "kBTC"
+                        satoshiDiv = 100_000_000_000;
+                    } else if (satoshiLow > 100_000_000) {
+                        satoshiUnit = "BTC"
+                        satoshiDiv = 100_000_000;
+                    } else if (satoshiLow > 100_000) {
+                        satoshiUnit = "mBTC"
+                        satoshiDiv = 100_000;
+                    } else if (satoshiLow > 100) {
+                        satoshiUnit = "uBTC"
+                        satoshiDiv = 100;
+                    }
+
+                    tooltip.textContent =
+                        "block height: " + blockHeightLow + " - " + blockHeightHigh +
+                        "\nsatoshi:      " + (satoshiLow / satoshiDiv).toFixed(3) + " " + satoshiUnit + " - " + (satoshiHigh / satoshiDiv).toFixed(3) + " " + satoshiUnit;
+
+
+                    let canvas = document.getElementById("canvas");
+                    let ctx = canvas.getContext("2d");
+
+                    // clear canvas
+                    //ctx.canvas.width = ctx.canvas.width;
+                    ctx.clearRect(lastX - 1, 0, 3, ctx.canvas.height);
+                    ctx.clearRect(0, lastY - 1, ctx.canvas.width, 3);
+
+                    ctx.beginPath();
+                    ctx.moveTo(imgX, 0);
+                    ctx.lineTo(imgX, ctx.canvas.height);
+                    ctx.moveTo(0, imgY);
+                    ctx.lineTo(ctx.canvas.width, imgY);
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 0;
+                    ctx.stroke();
+                    ctx.closePath();
+
+                    lastX = imgX;
+                    lastY = imgY;
                 }
             }
         }
