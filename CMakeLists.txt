@@ -1,5 +1,5 @@
 # see https://github.com/rvarago/modern-cmake-template
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13)
 set(CMAKE_CXX_STANDARD 17)
 
 project(buv)
@@ -7,6 +7,7 @@ project(buv)
 # generate compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 # use ccache, needs to be done before add_executable
 find_program(CCACHE_PROGRAM ccache)
