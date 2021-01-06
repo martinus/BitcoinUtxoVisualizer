@@ -10,7 +10,7 @@ The output looks like this (click for high resolution 4k image):
 
 **WARNING**: Generating such video is a time & resource intensive task, as Bitcoin's database is continuously growing.
 
-This currently only works in Linux. Prerequsists are a C++ compiler `g++` (or, my prefered choice, `clang++`), and CMake.
+This currently only works in Linux. Prerequisites are a C++ compiler `g++` (>= v9) (or, my prefered choice, `clang++`), CMake (>= 3.13), and OpenCV (`libopencv-dev`).
 
 
 1. fetch
@@ -87,7 +87,7 @@ To watch a preview, I usually update `buv.json` to start at a reasonably late bl
 
 1. In one window, start `ffplay`:
    ```
-   ffplay -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen" 
+   ffplay -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "tcp://127.0.0.1:12987?listen"
    ```
 
 1. In another window, start `buv` to connect to `ffplay` and pipe its output into it.
