@@ -15,11 +15,6 @@ mogrify -layers 'optimize' -fuzz 7% output.gif
 -->
 [![Bitcoin UTXO Creation & Destruction - Block 0 to 661045](doc/animation_small.gif)](https://www.youtube.com/watch?v=18m0bKsVb0Y)
 
-Here is the final image of that video. Click for high resolution 4k image:
-
-[![Bitcoin UTXO still image](doc/img_0661045_small.jpg)](https://raw.githubusercontent.com/martinus/BitcoinUtxoVisualizer/master/doc/img_0661045_compressed.png)
-
-
 # Installation
 
 **WARNING**: Generating such video is a time & resource intensive task, as Bitcoin's database is continuously growing.
@@ -45,7 +40,6 @@ This currently only works in Linux. Prerequisites are a C++ compiler `g++` (>= v
 
 
 # How To Generate a UTXO Movie
-
 
 This is a 3 step process:
 
@@ -117,3 +111,8 @@ ffmpeg -f rawvideo -pixel_format rgb24 -video_size 3840x2160 -framerate 60 -i "t
 ```
 
 For 660000 this will create a ~3 hour 4K x 60Hz video, where each frame represents a single block. The video is about 21GB large.
+
+Here is the final image of that video. Click for high resolution 4k image:
+
+[![Bitcoin UTXO still image](doc/img_0661045_small.jpg)](https://raw.githubusercontent.com/martinus/BitcoinUtxoVisualizer/master/doc/img_0661045_compressed.png)
+
