@@ -2,9 +2,23 @@
 
 BitcoinUtxoVisualizer (short `buv`) can generated videos of the evolution of the evolution of Bitcoin's [UTXO (Unspent Transaction Outputs)](https://medium.com/bitbees/what-the-heck-is-utxo-ca68f2651819).
 
-The output looks like this (click for high resolution 4k image):
+Watch the video on Youtube:
+
+<!--
+How to create this gif from the video:
+
+ffmpeg -ss 02:50:00 -i Bitcoin\ UTXO\ evolution\ -\ Block\ 0\ to\ 661045.mp4 -c copy out.mp4
+ffmpeg -i out.mp4 -frames:v 20 -vf "fps=10,scale=838:-1:flags=lanczos" -c:v pam -f image2pipe - |convert -delay 10 - -loop 0 -layers optimize output.gif
+
+# compress more, see https://stackoverflow.com/a/47343340/48181
+mogrify -layers 'optimize' -fuzz 7% output.gif
+-->
+[![Bitcoin UTXO Creation & Destruction - Block 0 to 661045](doc/animation_small.gif)](https://www.youtube.com/watch?v=18m0bKsVb0Y)
+
+Here is the final image of that video. Click for high resolution 4k image:
 
 [![Bitcoin UTXO still image](doc/img_0661045_small.jpg)](https://raw.githubusercontent.com/martinus/BitcoinUtxoVisualizer/master/doc/img_0661045_compressed.png)
+
 
 # Installation
 
