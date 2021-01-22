@@ -1,4 +1,4 @@
-#include "app/fetchAllBlockHashes.h"
+#include "app/fetchAllBlockHeaders.h"
 #include <app/Cfg.h>
 #include <app/Hud.h>
 #include <app/forEachChange.h>

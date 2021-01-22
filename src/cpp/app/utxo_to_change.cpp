@@ -1,7 +1,8 @@
 #include <app/BlockEncoder.h>
 #include <app/Cfg.h>
 #include <app/Utxo.h>
-#include <app/fetchAllBlockHashes.h>
+#include <app/fetchAllBlockHeaders.h>
+#include <util/BlockHeightProgressBar.h>
 #include <util/HttpClient.h>
 #include <util/Throttle.h>
 #include <util/args.h>
@@ -98,10 +99,9 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto cli = util::HttpClient::create(cfg.bitcoinRpcUrl.c_str());
     auto jsonParser = simdjson::dom::parser();
 
-    auto allBlockHashes = buv::fetchAllBlockHashes(cli);
-    LOG("got {} hashes", allBlockHashes.size());
+    auto allBlockHeaders = buv::fetchAllBlockHeaders(cli);
 
-    auto throttler = util::ThrottlePeriodic(1s);
+    auto throttler = util::ThrottlePeriodic(300ms);
     // auto utxoDumpThrottler = util::LogThrottler(20s);
 
     auto fout = std::ofstream(cfg.blkFile, std::ios::binary | std::ios::out);
@@ -112,14 +112,23 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         resource.cli = util::HttpClient::create(cfg.bitcoinRpcUrl.c_str());
     }
 
+    // sum up all nTx
+    auto totalNumTx = size_t();
+    for (auto const& bh : allBlockHeaders) {
+        totalNumTx += bh.nTx;
+    }
+
+    auto pb = util::BlockHeightProgressBar::create(totalNumTx, "creating BLK file");
+
+    auto numTxProcessed = size_t();
     util::parallelToSequential(
-        util::SequenceId{allBlockHashes.size()},
+        util::SequenceId{allBlockHeaders.size()},
         util::ResourceId{resources.size()},
         util::ConcurrentWorkers{std::thread::hardware_concurrency()},
 
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             auto& res = resources[resourceId.count()];
-            auto hash = util::toHex(allBlockHashes[sequenceId.count()]);
+            auto hash = util::toHex(allBlockHeaders[sequenceId.count()].hash);
 
             res.jsonData = res.cli->get("/rest/block/{}.json", hash);
             res.blockData = res.jsonParser.parse(res.jsonData);
@@ -129,11 +138,22 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             auto cib = integrateBlockData(res.blockData, *utxo);
             fout << cib.encode();
 
+            numTxProcessed += cib.blockData().nTx;
+
             // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
             // still)
             res.jsonData = std::string();
 
-            if (throttler()) {
+            if (throttler() || numTxProcessed >= totalNumTx) {
+                pb->set_progress(numTxProcessed,
+                                 "{}/{} tx, {}/{} blocks",
+                                 numTxProcessed,
+                                 totalNumTx,
+                                 cib.blockData().blockHeight,
+                                 allBlockHeaders.size());
+            }
+
+#if 0
                 if (util::kbhit()) {
                     switch (std::getchar()) {
                     case 'q':
@@ -146,7 +166,9 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
                         *utxo);
                 }
             }
+#endif
         });
+    pb = {};
 
     LOG("Done! utxo: {:d}", *utxo);
 }

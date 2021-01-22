@@ -16,6 +16,13 @@ target_include_directories(${PROJECT_NAME}
         "${CMAKE_CURRENT_SOURCE_DIR}/doctest/doctest"
 )
 
+# indicators
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/indicators/single_include"
+)
+
+
 # fmt
 target_include_directories(${PROJECT_NAME}
     PUBLIC
