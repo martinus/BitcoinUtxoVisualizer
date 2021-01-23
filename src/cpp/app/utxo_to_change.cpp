@@ -120,14 +120,14 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
 
     auto pb = util::BlockHeightProgressBar::create(totalNumTx, "creating BLK file");
 
-    double avgNumWorkersActive;
+    auto avgNumWorkersActive = 0.0;
 
     auto numTxProcessed = size_t();
     auto numActiveWorkers = std::atomic<size_t>();
     util::parallelToSequential(
         util::SequenceId{allBlockHeaders.size()},
         util::ResourceId{resources.size()},
-        util::ConcurrentWorkers{std::thread::hardware_concurrency()},
+        util::ConcurrentWorkers{std::thread::hardware_concurrency() + 1},
 
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             ++numActiveWorkers;
