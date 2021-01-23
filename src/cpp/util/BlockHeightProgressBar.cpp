@@ -9,19 +9,19 @@ using namespace indicators;
 namespace util {
 
 class BlockHeightProgressBarImpl : public BlockHeightProgressBar {
-    BlockProgressBar mBar{};
+    BlockProgressBar mBar;
 
 public:
     // see https://github.com/p-ranav/indicators
-    BlockHeightProgressBarImpl(size_t maxProgress, std::string_view what) {
+    BlockHeightProgressBarImpl(size_t maxProgress, std::string_view what)
+        : mBar{option::BarWidth{120},
+               option::Start{"["},
+               option::End{"]"},
+               option::ShowElapsedTime{true},
+               option::ShowRemainingTime{true},
+               option::MaxProgress{maxProgress},
+               option::PrefixText{fmt::format("{:<25}", what)}} {
         show_console_cursor(false);
-        mBar.set_option(option::BarWidth{120});
-        mBar.set_option(option::Start{"["});
-        mBar.set_option(option::End{"]"});
-        mBar.set_option(option::ShowElapsedTime{true});
-        mBar.set_option(option::ShowRemainingTime{true});
-        mBar.set_option(option::MaxProgress{maxProgress});
-        mBar.set_option(option::PrefixText{fmt::format("{:<30}", what)});
     }
 
     void set_progress(size_t progress, std::string&& str) override {
@@ -38,8 +38,8 @@ public:
     }
 };
 
-auto BlockHeightProgressBar::create(size_t numBlocks, std::string_view prefixTitle) -> std::unique_ptr<BlockHeightProgressBar> {
-    return std::make_unique<BlockHeightProgressBarImpl>(numBlocks, prefixTitle);
+auto BlockHeightProgressBar::create(size_t maxProgress, std::string_view prefixTitle) -> std::unique_ptr<BlockHeightProgressBar> {
+    return std::make_unique<BlockHeightProgressBarImpl>(maxProgress, prefixTitle);
 }
 
 } // namespace util

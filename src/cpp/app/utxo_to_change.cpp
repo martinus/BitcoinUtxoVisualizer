@@ -120,18 +120,23 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
 
     auto pb = util::BlockHeightProgressBar::create(totalNumTx, "creating BLK file");
 
+    double avgNumWorkersActive;
+
     auto numTxProcessed = size_t();
+    auto numActiveWorkers = std::atomic<size_t>();
     util::parallelToSequential(
         util::SequenceId{allBlockHeaders.size()},
         util::ResourceId{resources.size()},
         util::ConcurrentWorkers{std::thread::hardware_concurrency()},
 
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
+            ++numActiveWorkers;
             auto& res = resources[resourceId.count()];
             auto hash = util::toHex(allBlockHeaders[sequenceId.count()].hash);
 
             res.jsonData = res.cli->get("/rest/block/{}.json", hash);
             res.blockData = res.jsonParser.parse(res.jsonData);
+            --numActiveWorkers;
         },
         [&](util::ResourceId resourceId, util::SequenceId /*sequenceId*/) {
             auto& res = resources[resourceId.count()];
@@ -144,13 +149,16 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             // still)
             res.jsonData = std::string();
 
+            avgNumWorkersActive = avgNumWorkersActive * 0.95 + numActiveWorkers * 0.05;
+
             if (throttler() || numTxProcessed >= totalNumTx) {
                 pb->set_progress(numTxProcessed,
-                                 "{}/{} tx, {}/{} blocks",
+                                 "{}/{} tx, {}/{} blocks. {:.1f} workers",
                                  numTxProcessed,
                                  totalNumTx,
                                  cib.blockData().blockHeight,
-                                 allBlockHeaders.size());
+                                 allBlockHeaders.size(),
+                                 avgNumWorkersActive);
             }
 
 #if 0
