@@ -30,4 +30,19 @@ public:
     auto operator=(BlockHeightProgressBar&&) -> BlockHeightProgressBar& = delete;
 };
 
+class HeightAndTxProgressBar {
+public:
+    static auto create(size_t maxNumActiveWorkers, size_t maxBlocks, size_t maxTx) -> std::unique_ptr<HeightAndTxProgressBar>;
+
+    virtual void set_progress(float numActiveWorkers, size_t numBlocks, size_t numTx) = 0;
+
+    virtual ~HeightAndTxProgressBar() = default;
+    HeightAndTxProgressBar() = default;
+
+    HeightAndTxProgressBar(HeightAndTxProgressBar const&) = delete;
+    HeightAndTxProgressBar(HeightAndTxProgressBar&&) = delete;
+    auto operator=(HeightAndTxProgressBar const&) -> HeightAndTxProgressBar& = delete;
+    auto operator=(HeightAndTxProgressBar&&) -> HeightAndTxProgressBar& = delete;
+};
+
 } // namespace util

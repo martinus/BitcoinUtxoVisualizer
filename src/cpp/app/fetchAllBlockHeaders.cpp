@@ -19,7 +19,7 @@ namespace buv {
 
 auto fetchAllBlockHeaders(std::unique_ptr<util::HttpClient>& cli) -> std::vector<BlockHeader> {
     auto jsonParser = simdjson::dom::parser();
-    auto throttler = util::ThrottlePeriodic(300ms);
+    auto throttler = util::ThrottlePeriodic(50ms);
 
     auto json = cli->get("/rest/chaininfo.json");
     auto numBlocks = jsonParser.parse(json)["blocks"].get_uint64().value();

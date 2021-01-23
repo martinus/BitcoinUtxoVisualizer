@@ -101,7 +101,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
 
     auto allBlockHeaders = buv::fetchAllBlockHeaders(cli);
 
-    auto throttler = util::ThrottlePeriodic(300ms);
+    auto throttler = util::ThrottlePeriodic(50ms);
     // auto utxoDumpThrottler = util::LogThrottler(20s);
 
     auto fout = std::ofstream(cfg.blkFile, std::ios::binary | std::ios::out);
@@ -118,16 +118,19 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         totalNumTx += bh.nTx;
     }
 
-    auto pb = util::BlockHeightProgressBar::create(totalNumTx, "creating BLK file");
+    auto numWorkers = std::thread::hardware_concurrency() + 1;
+    fmt::print("\n");
+    auto pbs = util::HeightAndTxProgressBar::create(numWorkers, allBlockHeaders.size(), totalNumTx);
 
-    auto avgNumWorkersActive = 0.0;
+    auto numWorkersSum = size_t();
+    auto numWorkersCount = size_t();
 
     auto numTxProcessed = size_t();
     auto numActiveWorkers = std::atomic<size_t>();
     util::parallelToSequential(
         util::SequenceId{allBlockHeaders.size()},
         util::ResourceId{resources.size()},
-        util::ConcurrentWorkers{std::thread::hardware_concurrency() + 1},
+        util::ConcurrentWorkers{numWorkers},
 
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
             ++numActiveWorkers;
@@ -149,9 +152,15 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             // still)
             res.jsonData = std::string();
 
-            avgNumWorkersActive = avgNumWorkersActive * 0.95 + numActiveWorkers * 0.05;
+            numWorkersSum += numActiveWorkers;
+            numWorkersCount += 1;
 
             if (throttler() || numTxProcessed >= totalNumTx) {
+                pbs->set_progress(
+                    static_cast<float>(numWorkersSum) / numWorkersCount, cib.blockData().blockHeight + 1, numTxProcessed);
+                numWorkersSum = 0;
+                numWorkersCount = 0;
+#if 0 
                 pb->set_progress(numTxProcessed,
                                  "{}/{} tx, {}/{} blocks. {:.1f} workers",
                                  numTxProcessed,
@@ -159,6 +168,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
                                  cib.blockData().blockHeight,
                                  allBlockHeaders.size(),
                                  avgNumWorkersActive);
+#endif
             }
 
 #if 0
@@ -176,7 +186,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             }
 #endif
         });
-    pb = {};
+    pbs = {};
 
     LOG("Done! utxo: {:d}", *utxo);
 }
