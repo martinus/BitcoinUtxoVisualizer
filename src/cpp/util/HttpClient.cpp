@@ -3,6 +3,11 @@
 #include <fmt/format.h>
 #include <httplib.h>
 
+#include <chrono>
+#include <thread>
+
+using namespace std::literals;
+
 namespace util {
 
 class HttpClientImpl : public HttpClient {
@@ -21,11 +26,19 @@ public:
     auto operator=(HttpClientImpl&&) -> HttpClientImpl& = delete;
 
     [[nodiscard]] auto get(char const* path) -> std::string override {
-        auto res = mClient.Get(path);
-        if (res->status != 200) {
-            throw std::runtime_error(fmt::format("HttpClient: could not get '{}', got status {}", path, res->status));
+        auto delay = 10ms;
+
+        // try a few times times, with increasing delay
+        for (size_t i = 0; i < 10; ++i) {
+            auto res = mClient.Get(path);
+            if (res && res->status == 200) {
+                return std::move(res->body);
+            }
+            std::this_thread::sleep_for(delay);
+            delay *= 2;
         }
-        return std::move(res->body);
+
+        throw std::runtime_error(fmt::format("HttpClient: could not get '{}'", path));
     }
 };
 
