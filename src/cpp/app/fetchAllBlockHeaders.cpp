@@ -24,7 +24,7 @@ auto fetchAllBlockHeaders(std::unique_ptr<util::HttpClient>& cli) -> std::vector
     auto json = cli->get("/rest/chaininfo.json");
     auto numBlocks = jsonParser.parse(json)["blocks"].get_uint64().value();
 
-    auto pb = util::BlockHeightProgressBar::create(numBlocks, "fetching block hashes ");
+    auto pb = util::BlockHeightProgressBar::create(numBlocks, "blockheaders");
 
     // genesis block
     auto block = std::string_view("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");

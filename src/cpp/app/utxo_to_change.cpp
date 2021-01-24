@@ -101,7 +101,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
 
     auto allBlockHeaders = buv::fetchAllBlockHeaders(cli);
 
-    auto throttler = util::ThrottlePeriodic(50ms);
+    auto throttler = util::ThrottlePeriodic(200ms);
     // auto utxoDumpThrottler = util::LogThrottler(20s);
 
     auto fout = std::ofstream(cfg.blkFile, std::ios::binary | std::ios::out);
@@ -118,12 +118,13 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         totalNumTx += bh.nTx;
     }
 
-    auto numWorkers = std::thread::hardware_concurrency() + 1;
+    auto numWorkers = std::thread::hardware_concurrency();
     fmt::print("\n");
     auto pbs = util::HeightAndTxProgressBar::create(numWorkers, allBlockHeaders.size(), totalNumTx);
 
     auto numWorkersSum = size_t();
     auto numWorkersCount = size_t();
+    auto numWorkersExponentialAverage = float();
 
     auto numTxProcessed = size_t();
     auto numActiveWorkers = std::atomic<size_t>();
@@ -156,8 +157,9 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
             numWorkersCount += 1;
 
             if (throttler() || numTxProcessed >= totalNumTx) {
-                pbs->set_progress(
-                    static_cast<float>(numWorkersSum) / numWorkersCount, cib.blockData().blockHeight + 1, numTxProcessed);
+                numWorkersExponentialAverage =
+                    numWorkersExponentialAverage * 0.95F + (static_cast<float>(numWorkersSum) / numWorkersCount) * 0.05F;
+                pbs->set_progress(numWorkersExponentialAverage, cib.blockData().blockHeight + 1, numTxProcessed);
                 numWorkersSum = 0;
                 numWorkersCount = 0;
 #if 0 

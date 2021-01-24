@@ -8,14 +8,16 @@ using namespace indicators;
 
 namespace {
 
-[[nodiscard]] auto defaultBar(size_t maxProgress, std::string_view what) -> BlockProgressBar {
+constexpr auto prefixFormat = "{:<15}";
+
+template <typename... Args>
+[[nodiscard]] auto defaultBar(size_t maxProgress, std::string_view what, Args&&... args) -> BlockProgressBar {
     return BlockProgressBar{option::BarWidth{120},
                             option::Start{"["},
                             option::End{"]"},
-                            option::ShowElapsedTime{true},
-                            option::ShowRemainingTime{true},
                             option::MaxProgress{maxProgress},
-                            option::PrefixText{fmt::format("{:<25}", what)}};
+                            option::PrefixText{fmt::format(prefixFormat, what)},
+                            std::forward<Args>(args)...};
 }
 
 } // namespace
@@ -28,7 +30,7 @@ class BlockHeightProgressBarImpl : public BlockHeightProgressBar {
 public:
     // see https://github.com/p-ranav/indicators
     BlockHeightProgressBarImpl(size_t maxProgress, std::string_view what)
-        : mBar{defaultBar(maxProgress, what)} {
+        : mBar{defaultBar(maxProgress, what, option::ShowRemainingTime{true}, option::ShowElapsedTime{true})} {
         show_console_cursor(false);
     }
 
@@ -62,14 +64,9 @@ class HeightAndTxProgressBarImpl : public HeightAndTxProgressBar {
 
 public:
     HeightAndTxProgressBarImpl(size_t maxNumActiveWorkers, size_t maxBlocks, size_t maxTx)
-        : mActiveWorkers{option::BarWidth{120},
-                         option::Start{"["},
-                         option::End{"]"},
-                         option::MaxProgress{maxNumActiveWorkers},
-                         option::ShowPercentage{false},
-                         option::PrefixText{fmt::format("{:<25}", "active workers")}}
+        : mActiveWorkers{defaultBar(maxNumActiveWorkers, "busy threads", option::ShowPercentage{false})}
         , mBarBlocks(defaultBar(maxBlocks, "blocks"))
-        , mBarTx(defaultBar(maxTx, "transactions"))
+        , mBarTx(defaultBar(maxTx, "transactions", option::ShowRemainingTime{true}, option::ShowElapsedTime{true}))
         , mBars(mActiveWorkers, mBarBlocks, mBarTx)
         , mMaxBlocks(maxBlocks)
         , mMaxTx(maxTx) {}

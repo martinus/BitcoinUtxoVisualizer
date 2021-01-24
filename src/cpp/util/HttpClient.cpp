@@ -29,13 +29,15 @@ public:
         auto delay = 10ms;
 
         // try a few times times, with increasing delay
-        for (size_t i = 0; i < 10; ++i) {
+        for (size_t i = 0; i < 100; ++i) {
             auto res = mClient.Get(path);
             if (res && res->status == 200) {
                 return std::move(res->body);
             }
             std::this_thread::sleep_for(delay);
-            delay *= 2;
+            if (delay < 1s) {
+                delay *= 2;
+            }
         }
 
         throw std::runtime_error(fmt::format("HttpClient: could not get '{}'", path));
