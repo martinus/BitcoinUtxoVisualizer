@@ -2,8 +2,8 @@
     "bitcoinRpcUrl": "http://127.0.0.1:8332",
     "blkFile": "/run/media/martinus/big/bitcoin/BitcoinUtxoVisualizer/changes.blk1",
 
-    "utxoToChangeNumThreads": 24,
-    "utxoToChangeNumResources": 48,
+    "utxoToChangeNumThreads": 12,
+    "utxoToChangeNumResources": 24,
 
     "imageWidth": 3840,
     "imageHeight": 2160,
