@@ -107,7 +107,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto fout = std::ofstream(cfg.blkFile, std::ios::binary | std::ios::out);
     auto utxo = std::make_unique<buv::Utxo>();
 
-    auto resources = std::vector<ResourceData>(std::thread::hardware_concurrency() * 2);
+    auto resources = std::vector<ResourceData>(cfg.utxoToChangeNumResources);
     for (auto& resource : resources) {
         resource.cli = util::HttpClient::create(cfg.bitcoinRpcUrl.c_str());
     }
@@ -118,7 +118,7 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         totalNumTx += bh.nTx;
     }
 
-    auto numWorkers = std::thread::hardware_concurrency();
+    auto numWorkers = cfg.utxoToChangeNumThreads;
     fmt::print("\n");
     auto pbs = util::HeightAndTxProgressBar::create(numWorkers, allBlockHeaders.size(), totalNumTx);
 

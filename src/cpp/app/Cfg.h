@@ -17,6 +17,9 @@ struct Cfg {
     std::string bitcoinRpcUrl{};
 
     std::string blkFile{};
+    int64_t utxoToChangeNumThreads{};
+    int64_t utxoToChangeNumResources{};
+
     size_t imageWidth{};
     size_t imageHeight{};
 
