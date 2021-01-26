@@ -58,6 +58,11 @@ namespace {
                 auto sourceVout = static_cast<uint16_t>(vin["vout"].get_uint64());
 
                 // LOG("remove {} {}", util::toHex(sourceTxid), sourceVout);
+                // This is the limiting factor: this has to iterate the linked list.
+                // Is there a way to parallelize this? Not easily.
+                //
+                // One optimization might be make this a two step process: create a map of all data that we want to remove, so we only have to walk through each list once.
+                // This should even work well because the utxo should be sorted!
                 auto [satoshi, blockHeight] = utxo.remove(sourceTxid, sourceVout);
 
                 // found an output that's spent! negative amount, because it's spent
