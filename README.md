@@ -53,8 +53,8 @@ This is a 3 step process:
    server=1
    rest=1
    rpcport=8332
-   rpcthreads=32
-   rpcworkqueue=64
+   rpcthreads=12
+   rpcworkqueue=24
    txindex=1
    dbcache=2000
 

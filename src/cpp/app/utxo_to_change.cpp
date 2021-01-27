@@ -29,9 +29,20 @@ namespace {
 // 5781.343 src/cpp/app/utxo_to_change.cpp(134) |     660105 height,    7788404 bytes,   6377.508 MB max RSS, utxo: (  80314186
 // txids,  115288432 vout's used,  117964800 allocated (  18 bulk))
 
-[[nodiscard]] auto integrateBlockData(simdjson::dom::element const& blockData, buv::Utxo& utxo) -> buv::ChangesInBlock {
-    auto cib = buv::ChangesInBlock();
-    auto& bd = cib.beginBlock(blockData["height"].get_uint64());
+struct VoutsToAdd {
+    buv::TxIdPrefix txIdPrefix{};
+    std::vector<int64_t> satoshi{};
+};
+
+struct PreprocessedBlockData {
+    buv::ChangesInBlock cib{};
+    robin_hood::unordered_node_map<buv::TxIdPrefix, std::vector<uint16_t>> voutsToRemove{};
+    std::vector<VoutsToAdd> voutsToAdd{};
+};
+
+[[nodiscard]] auto preprocessBlockData(simdjson::dom::element const& blockData) -> PreprocessedBlockData {
+    auto pbd = PreprocessedBlockData();
+    auto& bd = pbd.cib.beginBlock(blockData["height"].get_uint64());
 
     bd.hash = util::fromHex<32>(blockData["hash"].get_string().value().data());
     bd.merkleRoot = util::fromHex<32>(blockData["merkleroot"].get_string().value().data());
@@ -49,7 +60,6 @@ namespace {
 
     auto isCoinbaseTx = true;
     for (auto const& tx : blockData["tx"]) {
-        // remove all inputs consumed by this transaction from utxo
         if (!isCoinbaseTx) {
             // first transaction is coinbase, has no inputs
             for (auto const& vin : tx["vin"]) {
@@ -57,16 +67,12 @@ namespace {
                 auto sourceTxid = util::fromHex<buv::txidPrefixSize>(vin["txid"].get_c_str());
                 auto sourceVout = static_cast<uint16_t>(vin["vout"].get_uint64());
 
-                // LOG("remove {} {}", util::toHex(sourceTxid), sourceVout);
                 // This is the limiting factor: this has to iterate the linked list.
                 // Is there a way to parallelize this? Not easily.
                 //
-                // One optimization might be make this a two step process: create a map of all data that we want to remove, so we only have to walk through each list once.
-                // This should even work well because the utxo should be sorted!
-                auto [satoshi, blockHeight] = utxo.remove(sourceTxid, sourceVout);
-
-                // found an output that's spent! negative amount, because it's spent
-                cib.addChange(-satoshi, blockHeight);
+                // One optimization might be make this a two step process: create a map of all data that we want to remove, so we
+                // only have to walk through each list once. This should even work well because the utxo should be sorted!
+                pbd.voutsToRemove[sourceTxid].push_back(sourceVout);
             }
         } else {
             isCoinbaseTx = false;
@@ -74,26 +80,30 @@ namespace {
 
         // add all outputs from this transaction to the utxo
         auto txid = util::fromHex<buv::txidPrefixSize>(tx["txid"].get_c_str());
-        auto inserter = utxo.inserter(txid, bd.blockHeight);
 
-        auto n = 0;
+        auto vouts = VoutsToAdd();
+        vouts.txIdPrefix = txid;
         for (auto const& vout : tx["vout"]) {
             auto sat = std::llround(vout["value"].get_double() * 100'000'000);
-            // LOG("insert {} {}", util::toHex(txid), n);
-            inserter.insert(n, sat);
-            cib.addChange(sat, bd.blockHeight);
-            ++n;
+            vouts.satoshi.push_back(sat);
+            // we can already add the additions here, no access to utxo needed for that
+            pbd.cib.addChange(sat, bd.blockHeight);
         }
+        pbd.voutsToAdd.push_back(std::move(vouts));
     }
-    cib.finalizeBlock();
-    return cib;
+
+    // make sure all removals vout's are sorted
+    for (auto& vouts : pbd.voutsToRemove) {
+        std::sort(vouts.second.begin(), vouts.second.end());
+    }
+
+    return pbd;
 }
 
 struct ResourceData {
     std::unique_ptr<util::HttpClient> cli{};
-    std::string jsonData{};
     simdjson::dom::parser jsonParser{};
-    simdjson::dom::element blockData{};
+    PreprocessedBlockData preprocessedBlockData{};
 };
 
 } // namespace
@@ -130,6 +140,8 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto numWorkersSum = size_t();
     auto numWorkersCount = size_t();
     auto numWorkersExponentialAverage = float();
+    auto numVoutsPerTxid = size_t();
+    auto numTxids = size_t();
 
     auto numTxProcessed = size_t();
     auto numActiveWorkers = std::atomic<size_t>();
@@ -139,24 +151,45 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
         util::ConcurrentWorkers{numWorkers},
 
         [&](util::ResourceId resourceId, util::SequenceId sequenceId) {
+            // this is done in parallel, do as much as we can here!
             ++numActiveWorkers;
             auto& res = resources[resourceId.count()];
             auto hash = util::toHex(allBlockHeaders[sequenceId.count()].hash);
 
-            res.jsonData = res.cli->get("/rest/block/{}.json", hash);
-            res.blockData = res.jsonParser.parse(res.jsonData);
+            auto jsonData = res.cli->get("/rest/block/{}.json", hash);
+            simdjson::dom::element blockData = res.jsonParser.parse(jsonData);
+            res.preprocessedBlockData = preprocessBlockData(blockData);
             --numActiveWorkers;
         },
         [&](util::ResourceId resourceId, util::SequenceId /*sequenceId*/) {
+            // done serially, try to do as little as possible here
             auto& res = resources[resourceId.count()];
-            auto cib = integrateBlockData(res.blockData, *utxo);
+            auto& cib = res.preprocessedBlockData.cib;
+
+            // integrate block data: all adds (has to be done before the removals!)
+            for (auto const& voutToAdd : res.preprocessedBlockData.voutsToAdd) {
+                auto inserter = utxo->inserter(voutToAdd.txIdPrefix, cib.blockData().blockHeight);
+
+                auto n = 0;
+                for (auto sat : voutToAdd.satoshi) {
+                    inserter.insert(n, sat);
+                    // cib already has the data
+                    ++n;
+                }
+            }
+
+            // integrate block data: all removes
+            for (auto const& voutToRemove : res.preprocessedBlockData.voutsToRemove) {
+                numVoutsPerTxid += voutToRemove.second.size();
+                ++numTxids;
+                utxo->removeAllSorted(voutToRemove.first, voutToRemove.second, [&cib](int64_t satoshi, uint32_t blockHeight) {
+                    cib.addChange(-satoshi, blockHeight);
+                });
+            }
+            cib.finalizeBlock();
             fout << cib.encode();
 
             numTxProcessed += cib.blockData().nTx;
-
-            // free the memory of the resource. Also helps find bugs (operating on old data. Not that it has ever happened, but
-            // still)
-            res.jsonData = std::string();
 
             numWorkersSum += numActiveWorkers;
             numWorkersCount += 1;
@@ -176,6 +209,14 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
                                  allBlockHeaders.size(),
                                  avgNumWorkersActive);
 #endif
+            }
+
+            if (util::kbhit()) {
+                std::getchar();
+                LOG("\n\n\n\n\nnumTxids={}, numVoutsPerTxid={}, avg={}\n\n\n\n\n",
+                    numTxids,
+                    numVoutsPerTxid,
+                    numVoutsPerTxid * 1.0 / numTxids);
             }
 
 #if 0

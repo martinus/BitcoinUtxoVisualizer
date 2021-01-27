@@ -5,6 +5,7 @@
 #include <cstring> // memcpy
 #include <limits>
 #include <list>
+#include <vector>
 
 namespace buv {
 
@@ -130,6 +131,44 @@ public:
     // entry with the last enry.
     // @return The removed satoshi value, and either c or nullptr if that was the last element
     auto remove(uint16_t vout, Chunk* c) -> std::pair<int64_t, Chunk*>;
+
+    template <typename Op>
+    auto removeAllSorted(std::vector<uint16_t> const& vouts, Chunk* root, Op&& op) {
+        Chunk* preFoundChunk = nullptr;
+        auto* newRoot = root;
+        auto* foundChunk = root;
+
+        auto voutIt = vouts.begin();
+        auto voutEnd = vouts.end();
+        while (voutIt != voutEnd) {
+            // preconditions:
+            // * voutIt is valid
+            // * foundChunk is valid, and the next element that might match
+            // * preFoundChunk is either nullptr (if foundChunk is the first entry), or the previous
+            if (foundChunk->isVout(*voutIt)) {
+                op(foundChunk->voutSatoshi().satoshi());
+                ++voutIt;
+
+                // put foundChunk back into the store and forward
+                auto* tmp = foundChunk->next();
+                foundChunk->voutSatoshi() = {};
+                putIntoStore(foundChunk);
+                foundChunk = tmp;
+
+                // reconnect list
+                if (preFoundChunk != nullptr) {
+                    preFoundChunk->next(foundChunk);
+                } else {
+                    newRoot = foundChunk;
+                }
+            } else {
+                preFoundChunk = foundChunk;
+                foundChunk = foundChunk->next();
+            }
+        }
+
+        return newRoot;
+    }
 
     // Number of entries in the freelist. O(1) operation
     [[nodiscard]] auto numFreeChunks() const -> size_t;

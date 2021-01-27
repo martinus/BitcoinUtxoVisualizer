@@ -124,6 +124,26 @@ public:
         throw std::runtime_error("DAMN! did not find txid");
     }
 
+    template<typename Op>
+    void removeAllSorted(TxIdPrefix const& txIdPrefix, std::vector<uint16_t> const& vouts, Op&& op) {
+        if (auto it = mTxidToUtxos.find(txIdPrefix); it != mTxidToUtxos.end()) {
+            auto* oldRoot = it->second.chunk();
+            auto blockHeight = it->second.blockHeight();
+
+            auto newRoot = mChunkStore.removeAllSorted(vouts, oldRoot, [blockHeight, &op](int64_t satoshi) {
+                op(satoshi, blockHeight);
+            });
+            if (newRoot == nullptr) {
+                // whole transaction was consumed, remove it from the map
+                mTxidToUtxos.erase(it);
+            } else if (newRoot != oldRoot) {
+                it->second.chunk(newRoot);
+            }
+        } else {
+            throw std::runtime_error("DAMN! did not find txid");
+        }
+    }
+
     // Creates an entry in the table, and returns an Inserter where the vout's can be inserted.
     auto inserter(TxIdPrefix const& txIdPrefix, uint32_t blockHeight) -> VoutInserter {
         auto& utxoPerTx = mTxidToUtxos[txIdPrefix];
