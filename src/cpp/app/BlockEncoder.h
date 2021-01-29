@@ -139,6 +139,11 @@ public:
 
     void addChange(int64_t satoshi, uint32_t blockHeight);
     void finalizeBlock();
+
+    // sorting is automatically don in finalizeBlock. It might be beneficial though to call sort() even when later more change is
+    // added, so that the final sort() is faster.
+    void sort();
+    
     [[nodiscard]] auto encode() const -> std::string;
 
     [[nodiscard]] auto operator==(ChangesInBlock const& other) const noexcept -> bool;

@@ -49,7 +49,10 @@ struct hash<buv::TxIdPrefix> {
 namespace buv {
 
 // try to do small-utxo optimization: directly encode 2 vout's here.
-//
+// Memory layout:
+// 8 byte: VoutSatoshi::emptyMask: not using small utxo optimization. vout == 1: place has a satoshi value. vout==0: place has NO
+// satoshi value 8 byte: (vout==1: place has a satoshi value, vout==0: place has NO satoshi value) OR pointer to chunk 4 byte:
+// blockheight
 class UtxoPerTx {
     static_assert(sizeof(void*) == sizeof(VoutSatoshi));
 
@@ -63,17 +66,16 @@ public:
         if (sat.size() <= 2) {
             // put into small opt
             for (size_t i = 0; i < sat.size(); ++i) {
-                voutSatoshi(i, VoutSatoshi{static_cast<uint16_t>(i), sat[i]});
+                voutSatoshi(static_cast<uint16_t>(i), sat[i]);
             }
             return true;
         }
 
-        auto* firstChunk = chunkStore.insert(0, sat[0], nullptr);
-        chunk(firstChunk);
-
-        auto* lastChunk = firstChunk;
+        // put all into chunks
+        auto* ptr = chunkStore.insert(0, sat[0], nullptr);
+        chunk(ptr);
         for (size_t i = 1; i < sat.size(); ++i) {
-            lastChunk = chunkStore.insert(i, sat[i], lastChunk);
+            ptr = chunkStore.insert(i, sat[i], ptr);
         }
         return false;
     }
@@ -85,14 +87,17 @@ public:
     }
 
     void chunk(Chunk* ptr) {
-        auto emptyVoutSatoshi = VoutSatoshi();
         // mark as !isSmallUtxo()
+        auto emptyVoutSatoshi = VoutSatoshi();
         std::memcpy(mChunkPtrOrVoutSatoshi.data(), &emptyVoutSatoshi, sizeof(void*));
+
         std::memcpy(mChunkPtrOrVoutSatoshi.data() + sizeof(void*), &ptr, sizeof(void*));
     }
 
-    void voutSatoshi(size_t idx, VoutSatoshi const& voutSatoshi) {
-        std::memcpy(mChunkPtrOrVoutSatoshi.data() + sizeof(VoutSatoshi) * idx, &voutSatoshi, sizeof(VoutSatoshi));
+    void voutSatoshi(uint16_t idx, int64_t satoshi) {
+        // vout==1 means place is taken
+        auto vs = VoutSatoshi(1, satoshi);
+        std::memcpy(mChunkPtrOrVoutSatoshi.data() + sizeof(VoutSatoshi) * idx, &vs, sizeof(VoutSatoshi));
     }
 
     [[nodiscard]] auto blockHeight() const -> uint32_t {
@@ -104,13 +109,33 @@ public:
     }
 
     [[nodiscard]] auto isSmallUtxo() const -> bool {
-        return !voutSatoshi(0).empty();
+        auto vs = VoutSatoshi();
+        std::memcpy(&vs, mChunkPtrOrVoutSatoshi.data(), sizeof(void*));
+        return !vs.isEmptyMask();
     }
 
-    [[nodiscard]] auto voutSatoshi(size_t idx) const -> VoutSatoshi {
+    [[nodiscard]] auto removeVoutSatoshi(size_t idx) -> int64_t {
+        // get the value
         auto voutSatoshi = VoutSatoshi();
         std::memcpy(&voutSatoshi, mChunkPtrOrVoutSatoshi.data() + sizeof(VoutSatoshi) * idx, sizeof(VoutSatoshi));
-        return voutSatoshi;
+        auto sat = voutSatoshi.satoshi();
+
+        // reset the value to 0
+        voutSatoshi = VoutSatoshi{0, 0};
+        std::memcpy(mChunkPtrOrVoutSatoshi.data() + sizeof(VoutSatoshi) * idx, &voutSatoshi, sizeof(VoutSatoshi));
+
+        return sat;
+    }
+
+    [[nodiscard]] auto empty() const -> bool {
+        if (isSmallUtxo()) {
+            auto x1 = uint64_t();
+            std::memcpy(&x1, mChunkPtrOrVoutSatoshi.data(), sizeof(VoutSatoshi));
+            auto x2 = uint64_t();
+            std::memcpy(&x2, mChunkPtrOrVoutSatoshi.data() + sizeof(VoutSatoshi), sizeof(VoutSatoshi));
+            return x1 == 0U && x2 == 0U;
+        }
+        return chunk() == nullptr;
     }
 };
 
@@ -140,7 +165,10 @@ public:
                 // small utxo optimization: does not change the values for now. If we'd do that, the isSmallUtxo() detection fails
                 // TODO(martinus) we need to figure out when it's empty! so we can remove the entry.
                 for (auto vout : vouts) {
-                    op(utxoPerTx.voutSatoshi(vout).satoshi(), blockHeight);
+                    op(utxoPerTx.removeVoutSatoshi(vout), blockHeight);
+                }
+                if (utxoPerTx.empty()) {
+                    mTxidToUtxos.erase(it);
                 }
             } else {
                 auto* oldRoot = utxoPerTx.chunk();

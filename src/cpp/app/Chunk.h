@@ -60,7 +60,7 @@ public:
         return mVoutAndSatoshi;
     }
 
-    [[nodiscard]] auto empty() const -> bool {
+    [[nodiscard]] auto isEmptyMask() const -> bool {
         return mVoutAndSatoshi == emptyMask;
     }
 };

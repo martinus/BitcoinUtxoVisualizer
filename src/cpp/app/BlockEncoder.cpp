@@ -21,8 +21,12 @@ void ChangesInBlock::finalizeBlock() {
     if (mIsFinalized) {
         throw std::runtime_error("finalizeBlock() has already been called, not needed any more");
     }
-    std::sort(mChangeAtBlockheights.begin(), mChangeAtBlockheights.end());
+    sort();
     mIsFinalized = true;
+}
+
+void ChangesInBlock::sort() {
+    std::sort(mChangeAtBlockheights.begin(), mChangeAtBlockheights.end());
 }
 
 void ChangesInBlock::addChange(int64_t satoshi, uint32_t blockHeight) {

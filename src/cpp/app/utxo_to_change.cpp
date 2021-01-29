@@ -97,6 +97,9 @@ struct PreprocessedBlockData {
         std::sort(vouts.second.begin(), vouts.second.end());
     }
 
+    // this sort is not necessary, but a bit of a performance benefit
+    pbd.cib.sort();
+
     return pbd;
 }
 
