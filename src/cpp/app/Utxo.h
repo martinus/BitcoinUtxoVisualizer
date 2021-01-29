@@ -138,6 +138,7 @@ public:
 
             if (utxoPerTx.isSmallUtxo()) {
                 // small utxo optimization: does not change the values for now. If we'd do that, the isSmallUtxo() detection fails
+                // TODO(martinus) we need to figure out when it's empty! so we can remove the entry.
                 for (auto vout : vouts) {
                     op(utxoPerTx.voutSatoshi(vout).satoshi(), blockHeight);
                 }
