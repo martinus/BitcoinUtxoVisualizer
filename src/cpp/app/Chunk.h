@@ -25,7 +25,7 @@ namespace buv {
 // A ChunkStore allocates multiple chunks at once, and gives free ones out, and takes them back. It never frees anything, just
 // keeps them in a linked list.
 
-// Stores vout and satoshi in 10 bytes.
+// Stores vout and satoshi in 8 bytes.
 // Special vout value 0xFFFF means it's empty.
 class VoutSatoshi {
     static constexpr auto emptyMask = uint64_t(0x00000000'0000FFFF);
@@ -58,6 +58,10 @@ public:
     // internal data
     [[nodiscard]] auto data() const -> uint64_t {
         return mVoutAndSatoshi;
+    }
+
+    [[nodiscard]] auto empty() const -> bool {
+        return mVoutAndSatoshi == emptyMask;
     }
 };
 

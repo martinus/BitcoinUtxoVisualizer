@@ -48,20 +48,51 @@ struct hash<buv::TxIdPrefix> {
 
 namespace buv {
 
+// try to do small-utxo optimization: directly encode 2 vout's here.
+//
 class UtxoPerTx {
+    static_assert(sizeof(void*) == sizeof(VoutSatoshi));
+
     // use an array so we we can get no padding
-    std::array<uint8_t, sizeof(void*)> mChunkPtr{};
+    std::array<uint8_t, sizeof(VoutSatoshi) * 2> mChunkPtrOrVoutSatoshi{};
     uint32_t mBlockHeight = 0;
 
 public:
+    // sets the satoshi. Returns true if smallUtxoOptimization is used.
+    auto satoshi(ChunkStore& chunkStore, std::vector<int64_t> const& sat) -> bool {
+        if (sat.size() <= 2) {
+            // put into small opt
+            for (size_t i = 0; i < sat.size(); ++i) {
+                voutSatoshi(i, VoutSatoshi{static_cast<uint16_t>(i), sat[i]});
+            }
+            return true;
+        }
+
+        auto* firstChunk = chunkStore.insert(0, sat[0], nullptr);
+        chunk(firstChunk);
+
+        auto* lastChunk = firstChunk;
+        for (size_t i = 1; i < sat.size(); ++i) {
+            lastChunk = chunkStore.insert(i, sat[i], lastChunk);
+        }
+        return false;
+    }
+
     [[nodiscard]] auto chunk() const -> Chunk* {
         Chunk* ptr = nullptr;
-        std::memcpy(&ptr, mChunkPtr.data(), sizeof(void*));
+        std::memcpy(&ptr, mChunkPtrOrVoutSatoshi.data() + sizeof(void*), sizeof(void*));
         return ptr;
     }
 
     void chunk(Chunk* ptr) {
-        std::memcpy(mChunkPtr.data(), &ptr, sizeof(void*));
+        auto emptyVoutSatoshi = VoutSatoshi();
+        // mark as !isSmallUtxo()
+        std::memcpy(mChunkPtrOrVoutSatoshi.data(), &emptyVoutSatoshi, sizeof(void*));
+        std::memcpy(mChunkPtrOrVoutSatoshi.data() + sizeof(void*), &ptr, sizeof(void*));
+    }
+
+    void voutSatoshi(size_t idx, VoutSatoshi const& voutSatoshi) {
+        std::memcpy(mChunkPtrOrVoutSatoshi.data() + sizeof(VoutSatoshi) * idx, &voutSatoshi, sizeof(VoutSatoshi));
     }
 
     [[nodiscard]] auto blockHeight() const -> uint32_t {
@@ -71,27 +102,19 @@ public:
     void blockHeight(uint32_t bh) {
         mBlockHeight = bh;
     }
-};
 
-static_assert(sizeof(UtxoPerTx) == 8 + 4);
+    [[nodiscard]] auto isSmallUtxo() const -> bool {
+        return !voutSatoshi(0).empty();
+    }
 
-class VoutInserter {
-    ChunkStore* mChunkStore = nullptr;
-    UtxoPerTx* mUtxoPerTx = nullptr;
-    Chunk* mLastChunk = nullptr;
-
-public:
-    VoutInserter(ChunkStore& chunkStore, UtxoPerTx& utxoPerTx)
-        : mChunkStore(&chunkStore)
-        , mUtxoPerTx(&utxoPerTx) {}
-
-    void insert(uint16_t vout, int64_t satoshi) {
-        mLastChunk = mChunkStore->insert(vout, satoshi, mLastChunk);
-        if (mUtxoPerTx->chunk() == nullptr) {
-            mUtxoPerTx->chunk(mLastChunk);
-        }
+    [[nodiscard]] auto voutSatoshi(size_t idx) const -> VoutSatoshi {
+        auto voutSatoshi = VoutSatoshi();
+        std::memcpy(&voutSatoshi, mChunkPtrOrVoutSatoshi.data() + sizeof(VoutSatoshi) * idx, sizeof(VoutSatoshi));
+        return voutSatoshi;
     }
 };
+
+static_assert(sizeof(UtxoPerTx) == 8 + 8 + 4);
 
 class Utxo {
     ChunkStore mChunkStore{};
@@ -99,7 +122,7 @@ class Utxo {
     // using Map = std::unordered_map<TxIdPrefix, UtxoPerTx>;
     Map mTxidToUtxos{};
 
-    static_assert(sizeof(Map::value_type) == 8 + 8 + 4);
+    static_assert(sizeof(Map::value_type) == sizeof(TxIdPrefix) + sizeof(UtxoPerTx));
 
 public:
     Utxo() {
@@ -107,37 +130,29 @@ public:
         mTxidToUtxos.reserve(100'000'000);
     }
 
-    // Removes the utxo, and returns the amount & blockheight when it was added.
-    [[nodiscard]] auto remove(TxIdPrefix const& txIdPrefix, uint16_t vout) -> std::pair<int64_t, uint32_t> {
-        if (auto it = mTxidToUtxos.find(txIdPrefix); it != mTxidToUtxos.end()) {
-            auto* oldRoot = it->second.chunk();
-            auto [satoshi, newRoot] = mChunkStore.remove(vout, oldRoot);
-            auto blockHeight = it->second.blockHeight();
-            if (newRoot == nullptr) {
-                // whole transaction was consumed, remove it from the map
-                mTxidToUtxos.erase(it);
-            } else if (newRoot != oldRoot) {
-                it->second.chunk(newRoot);
-            }
-            return std::make_pair(satoshi, blockHeight);
-        }
-        throw std::runtime_error("DAMN! did not find txid");
-    }
-
-    template<typename Op>
+    template <typename Op>
     void removeAllSorted(TxIdPrefix const& txIdPrefix, std::vector<uint16_t> const& vouts, Op&& op) {
         if (auto it = mTxidToUtxos.find(txIdPrefix); it != mTxidToUtxos.end()) {
-            auto* oldRoot = it->second.chunk();
-            auto blockHeight = it->second.blockHeight();
+            auto& utxoPerTx = it->second;
+            auto blockHeight = utxoPerTx.blockHeight();
 
-            auto newRoot = mChunkStore.removeAllSorted(vouts, oldRoot, [blockHeight, &op](int64_t satoshi) {
-                op(satoshi, blockHeight);
-            });
-            if (newRoot == nullptr) {
-                // whole transaction was consumed, remove it from the map
-                mTxidToUtxos.erase(it);
-            } else if (newRoot != oldRoot) {
-                it->second.chunk(newRoot);
+            if (utxoPerTx.isSmallUtxo()) {
+                // small utxo optimization: does not change the values for now. If we'd do that, the isSmallUtxo() detection fails
+                for (auto vout : vouts) {
+                    op(utxoPerTx.voutSatoshi(vout).satoshi(), blockHeight);
+                }
+            } else {
+                auto* oldRoot = utxoPerTx.chunk();
+
+                auto newRoot = mChunkStore.removeAllSorted(vouts, oldRoot, [blockHeight, &op](int64_t satoshi) {
+                    op(satoshi, blockHeight);
+                });
+                if (newRoot == nullptr) {
+                    // whole transaction was consumed, remove it from the map
+                    mTxidToUtxos.erase(it);
+                } else if (newRoot != oldRoot) {
+                    utxoPerTx.chunk(newRoot);
+                }
             }
         } else {
             throw std::runtime_error("DAMN! did not find txid");
@@ -145,10 +160,11 @@ public:
     }
 
     // Creates an entry in the table, and returns an Inserter where the vout's can be inserted.
-    auto inserter(TxIdPrefix const& txIdPrefix, uint32_t blockHeight) -> VoutInserter {
+    // returns true if small UTXO optimization is used
+    auto insert(TxIdPrefix const& txIdPrefix, uint32_t blockHeight, std::vector<int64_t> const& satoshi) -> bool {
         auto& utxoPerTx = mTxidToUtxos[txIdPrefix];
         utxoPerTx.blockHeight(blockHeight);
-        return VoutInserter(mChunkStore, utxoPerTx);
+        return utxoPerTx.satoshi(mChunkStore, satoshi);
     }
 
     [[nodiscard]] auto map() const -> Map const& {

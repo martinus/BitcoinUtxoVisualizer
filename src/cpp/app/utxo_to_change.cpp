@@ -140,8 +140,8 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
     auto numWorkersSum = size_t();
     auto numWorkersCount = size_t();
     auto numWorkersExponentialAverage = float();
-    auto numVoutsPerTxid = size_t();
-    auto numTxids = size_t();
+
+    auto numSallUtxoOptUsed = std::array<size_t, 2>();
 
     auto numTxProcessed = size_t();
     auto numActiveWorkers = std::atomic<size_t>();
@@ -168,20 +168,14 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
 
             // integrate block data: all adds (has to be done before the removals!)
             for (auto const& voutToAdd : res.preprocessedBlockData.voutsToAdd) {
-                auto inserter = utxo->inserter(voutToAdd.txIdPrefix, cib.blockData().blockHeight);
+                auto isSmallUtxoOptimizationUsed =
+                    utxo->insert(voutToAdd.txIdPrefix, cib.blockData().blockHeight, voutToAdd.satoshi);
 
-                auto n = 0;
-                for (auto sat : voutToAdd.satoshi) {
-                    inserter.insert(n, sat);
-                    // cib already has the data
-                    ++n;
-                }
+                ++numSallUtxoOptUsed[isSmallUtxoOptimizationUsed ? 1U : 0U];
             }
 
             // integrate block data: all removes
             for (auto const& voutToRemove : res.preprocessedBlockData.voutsToRemove) {
-                numVoutsPerTxid += voutToRemove.second.size();
-                ++numTxids;
                 utxo->removeAllSorted(voutToRemove.first, voutToRemove.second, [&cib](int64_t satoshi, uint32_t blockHeight) {
                     cib.addChange(-satoshi, blockHeight);
                 });
@@ -200,23 +194,14 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
                 pbs->set_progress(numWorkersExponentialAverage, cib.blockData().blockHeight + 1, numTxProcessed);
                 numWorkersSum = 0;
                 numWorkersCount = 0;
-#if 0 
-                pb->set_progress(numTxProcessed,
-                                 "{}/{} tx, {}/{} blocks. {:.1f} workers",
-                                 numTxProcessed,
-                                 totalNumTx,
-                                 cib.blockData().blockHeight,
-                                 allBlockHeaders.size(),
-                                 avgNumWorkersActive);
-#endif
             }
 
             if (util::kbhit()) {
                 std::getchar();
-                LOG("\n\n\n\n\nnumTxids={}, numVoutsPerTxid={}, avg={}\n\n\n\n\n",
-                    numTxids,
-                    numVoutsPerTxid,
-                    numVoutsPerTxid * 1.0 / numTxids);
+                for (size_t i = 0; i < numSallUtxoOptUsed.size(); ++i) {
+                    fmt::print("\n{:3}: {:12}", i, numSallUtxoOptUsed[i]);
+                }
+                fmt::print("\n\n\n\n\n");
             }
 
 #if 0
