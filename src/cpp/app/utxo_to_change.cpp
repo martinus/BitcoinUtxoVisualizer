@@ -206,23 +206,8 @@ TEST_CASE("utxo_to_change" * doctest::skip()) {
                 }
                 fmt::print("\n\n\n\n\n");
             }
-
-#if 0
-                if (util::kbhit()) {
-                    switch (std::getchar()) {
-                    case 'q':
-                        buv::serialize(cib.blockData().blockHeight, *utxo, "utxo.dat");
-                    }
-                } else {
-                    LOG("{:10} height {:10.3f} MB max RSS, utxo: {}",
-                        cib.blockData().blockHeight,
-                        util::maxRss() / 1048576.0,
-                        *utxo);
-                }
-            }
-#endif
         });
     pbs = {};
 
-    LOG("Done! utxo: {:d}", *utxo);
+    LOG("Done!");
 }

@@ -212,6 +212,8 @@ void serialize(uint32_t blockHeight, Utxo const& utxo, std::filesystem::path con
 
 } // namespace buv
 
+#if 0
+
 template <>
 class fmt::formatter<buv::Utxo> {
     bool mIsDetailed = false;
@@ -220,3 +222,5 @@ public:
     auto parse(fmt::format_parse_context& ctx) -> format_parse_context::iterator;
     auto format(buv::Utxo const& utxo, format_context& ctx) const -> format_context::iterator;
 };
+
+#endif

@@ -74,6 +74,7 @@ void serialize(uint32_t blockHeight, Utxo const& utxo, std::filesystem::path con
 
 } // namespace buv
 
+#if 0
 namespace fmt {
 
 auto formatter<buv::Utxo>::parse(format_parse_context& ctx) -> format_parse_context::iterator {
@@ -136,3 +137,5 @@ auto formatter<buv::Utxo>::format(buv::Utxo const& utxo, format_context& ctx) co
 }
 
 } // namespace fmt
+
+#endif
